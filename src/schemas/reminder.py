@@ -2,10 +2,15 @@
 # REMINDER SCHEMA - Calendar events backup
 # ============================================
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
 from pydantic import BaseModel, Field
+
+
+def utc_now() -> datetime:
+    """Get current UTC time (timezone-aware)."""
+    return datetime.now(timezone.utc)
 
 
 class ReminderSchema(BaseModel):
@@ -33,7 +38,7 @@ class ReminderSchema(BaseModel):
     completed: bool = Field(default=False, description="Whether completed")
 
     # Timestamps
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
 
     class Config:
         populate_by_name = True

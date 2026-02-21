@@ -4,7 +4,7 @@
 
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict, Any
 
 from google.auth.transport.requests import Request
@@ -174,7 +174,7 @@ class GoogleCalendarClient:
 
         try:
             if time_min is None:
-                time_min = datetime.utcnow()
+                time_min = datetime.now(timezone.utc)
 
             params = {
                 "calendarId": "primary",
@@ -218,7 +218,7 @@ class GoogleCalendarClient:
         try:
             events_result = self.service.events().list(
                 calendarId="primary",
-                timeMin=datetime.utcnow().isoformat() + "Z",
+                timeMin=datetime.now(timezone.utc).isoformat() + "Z",
                 maxResults=max_results,
                 singleEvents=True,
                 orderBy="startTime",

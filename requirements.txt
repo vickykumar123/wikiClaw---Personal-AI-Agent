@@ -28,3 +28,4 @@ google-auth-httplib2
 # Utilities
 pydantic  # Data validation
 python-dateutil  # Date parsing
+ddgs  # Web search (DuckDuckGo)

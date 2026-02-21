@@ -32,6 +32,8 @@ Tool usage:
 - list_events: When user asks about their schedule or upcoming events
 - search_events: When user asks about a specific event or meeting
 - delete_event: When user asks to cancel or remove an event
+- web_search: When user asks about current info, facts, or anything requiring web lookup
+- news_search: When user asks about recent news or current events
 
 IMPORTANT tool behavior:
 - Call tools only when necessary

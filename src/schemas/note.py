@@ -2,10 +2,15 @@
 # NOTE SCHEMA - Structured notes storage
 # ============================================
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 
 from pydantic import BaseModel, Field
+
+
+def utc_now() -> datetime:
+    """Get current UTC time (timezone-aware)."""
+    return datetime.now(timezone.utc)
 
 
 class NoteSchema(BaseModel):
@@ -30,8 +35,8 @@ class NoteSchema(BaseModel):
     )
 
     # Timestamps
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
 
     class Config:
         populate_by_name = True

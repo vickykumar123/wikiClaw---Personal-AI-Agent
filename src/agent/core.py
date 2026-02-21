@@ -16,6 +16,7 @@ from tools.base import BaseTool
 from tools.memory import SearchMemoryTool, SaveMemoryTool
 from tools.notes import CreateNoteTool, SearchNotesTool, ListNotesTool, DeleteNoteTool
 from tools.calendar import CreateEventTool, ListEventsTool, SearchEventsTool, DeleteEventTool
+from tools.websearch import WebSearchTool, NewsSearchTool
 from integrations.google.calendar import GoogleCalendarClient
 from constants import MAX_RECENT_MESSAGES
 
@@ -108,6 +109,12 @@ class Agent:
                 SearchEventsTool(calendar_client=self.calendar),
                 DeleteEventTool(calendar_client=self.calendar)
             ])
+
+        # Web search tools (always available)
+        tools.extend([
+            WebSearchTool(),
+            NewsSearchTool()
+        ])
 
         return tools
 

@@ -2,10 +2,15 @@
 # MESSAGE SCHEMA - Chat messages collection
 # ============================================
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any
 
 from pydantic import BaseModel, Field
+
+
+def utc_now() -> datetime:
+    """Get current UTC time (timezone-aware)."""
+    return datetime.now(timezone.utc)
 
 
 class MessageSchema(BaseModel):
@@ -23,7 +28,7 @@ class MessageSchema(BaseModel):
     role: str = Field(..., description="'user' or 'assistant'")
     content: str = Field(..., description="Message text")
     platform: str = Field(default="telegram", description="Source platform")
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
 
     class Config:
         populate_by_name = True
