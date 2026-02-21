@@ -15,6 +15,8 @@ from schemas.message import MessageSchema
 from tools.base import BaseTool
 from tools.memory import SearchMemoryTool, SaveMemoryTool
 from tools.notes import CreateNoteTool, SearchNotesTool, ListNotesTool, DeleteNoteTool
+from tools.calendar import CreateEventTool, ListEventsTool, SearchEventsTool, DeleteEventTool
+from integrations.google.calendar import GoogleCalendarClient
 from constants import MAX_RECENT_MESSAGES
 
 # Set up logging
@@ -38,7 +40,8 @@ class Agent:
         self,
         llm_client: OllamaClient,
         db: MongoDB,
-        embeddings_client: EmbeddingsClient
+        embeddings_client: EmbeddingsClient,
+        calendar_client: Optional[GoogleCalendarClient] = None
     ):
         """
         Initialize the agent.
@@ -47,10 +50,12 @@ class Agent:
             llm_client: Ollama client for LLM calls
             db: MongoDB connection for storage
             embeddings_client: OpenAI embeddings client
+            calendar_client: Google Calendar client (optional)
         """
         self.llm = llm_client
         self.db = db
         self.embeddings = embeddings_client
+        self.calendar = calendar_client
 
     def _get_tools_for_user(self, user_id: str) -> List[BaseTool]:
         """
@@ -62,7 +67,7 @@ class Agent:
         Returns:
             List of tool instances
         """
-        return [
+        tools = [
             # Memory tools
             SearchMemoryTool(
                 db=self.db,
@@ -94,6 +99,17 @@ class Agent:
                 user_id=user_id
             )
         ]
+
+        # Add calendar tools if client is available
+        if self.calendar:
+            tools.extend([
+                CreateEventTool(calendar_client=self.calendar),
+                ListEventsTool(calendar_client=self.calendar),
+                SearchEventsTool(calendar_client=self.calendar),
+                DeleteEventTool(calendar_client=self.calendar)
+            ])
+
+        return tools
 
     async def process_message(self, message: Message) -> str:
         """

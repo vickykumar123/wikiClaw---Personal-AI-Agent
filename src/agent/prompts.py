@@ -28,6 +28,10 @@ Tool usage:
 - search_notes: When user asks to find a note they created
 - list_notes: When user asks to see all their notes
 - delete_note: When user asks to remove a note
+- create_event: When user asks to schedule something, set a reminder, or add calendar event
+- list_events: When user asks about their schedule or upcoming events
+- search_events: When user asks about a specific event or meeting
+- delete_event: When user asks to cancel or remove an event
 
 IMPORTANT tool behavior:
 - Call tools only when necessary

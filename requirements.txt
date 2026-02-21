@@ -27,3 +27,4 @@ google-auth-httplib2
 
 # Utilities
 pydantic  # Data validation
+python-dateutil  # Date parsing

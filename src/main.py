@@ -15,6 +15,7 @@ from agent.llm import OllamaClient
 from agent.core import Agent
 from database.mongodb import MongoDB
 from memory.embeddings import EmbeddingsClient
+from integrations.google.calendar import GoogleCalendarClient
 
 # Global references for shutdown handler
 webhook_server: Optional[WebhookServer] = None
@@ -106,11 +107,27 @@ async def main() -> None:
     else:
         logger.warning("Ollama not reachable, but continuing...")
 
+    # Create Google Calendar client (optional)
+    calendar_client = None
+    try:
+        calendar_client = GoogleCalendarClient(
+            credentials_path=config.google_credentials_path,
+            token_path=config.google_token_path
+        )
+        if calendar_client.authenticate():
+            logger.info("Google Calendar authenticated")
+        else:
+            logger.warning("Google Calendar auth failed, continuing without it")
+            calendar_client = None
+    except Exception as e:
+        logger.warning(f"Google Calendar not available: {e}")
+
     # Create Agent
     agent = Agent(
         llm_client=llm_client,
         db=db,
-        embeddings_client=embeddings_client
+        embeddings_client=embeddings_client,
+        calendar_client=calendar_client
     )
     logger.info("Agent initialized")
 
