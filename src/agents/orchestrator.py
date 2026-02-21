@@ -28,6 +28,12 @@ Guidelines:
 - Only call an agent when the user's request requires it
 - You can call multiple agents if the request needs different capabilities
 
+IMPORTANT - Response format:
+- Do NOT use markdown formatting (no **, *, #, ```, etc.)
+- Use plain text only
+- Use simple dashes (-) for lists
+- Keep responses clean and readable
+
 IMPORTANT - After receiving agent results:
 - ALWAYS include the agent's result/confirmation in your response
 - If memory was saved, confirm what was saved

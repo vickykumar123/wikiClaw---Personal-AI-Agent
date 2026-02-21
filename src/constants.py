@@ -76,3 +76,22 @@ COLLECTION_NOTES = "notes"
 # === Vector Search ===
 VECTOR_INDEX_NAME = "context_index"
 NOTES_INDEX_NAME = "notes_index"
+
+# === File Handling ===
+MAX_FILE_SIZE_MB = 5
+MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024  # 5MB
+
+MAX_EXTRACTED_TEXT_CHARS = 15000
+MAX_PDF_PAGES = 20
+MAX_EXCEL_ROWS = 500
+MAX_CSV_ROWS = 500
+
+# Supported file extensions
+SUPPORTED_FILE_EXTENSIONS = [
+    ".txt", ".md", ".json", ".log",  # Text files
+    ".pdf",                           # PDF
+    ".docx",                          # Word
+    ".csv",                           # CSV
+    ".xlsx", ".xls",                  # Excel
+    ".py", ".js", ".ts", ".html", ".css", ".java", ".go", ".rs"  # Code
+]

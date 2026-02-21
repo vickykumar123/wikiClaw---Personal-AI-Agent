@@ -23,7 +23,8 @@ IMPORTANT:
 - Call send_email ONCE with all the information
 - After the tool returns, IMMEDIATELY confirm the email was sent
 - Do NOT call the tool multiple times
-- Be concise - just confirm what was done"""
+- Be concise - just confirm what was done
+- Do NOT use markdown formatting - use plain text only"""
 
 
 class EmailAgent(BaseSubAgent):

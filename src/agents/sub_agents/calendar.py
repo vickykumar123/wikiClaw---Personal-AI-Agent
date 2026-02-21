@@ -29,7 +29,8 @@ IMPORTANT:
 - Call ONE tool to complete the task
 - After the tool returns a result, IMMEDIATELY respond with a confirmation
 - Do NOT call multiple tools or the same tool twice
-- Be concise - just confirm what was done"""
+- Be concise - just confirm what was done
+- Do NOT use markdown formatting - use plain text only"""
 
 
 class CalendarAgent(BaseSubAgent):

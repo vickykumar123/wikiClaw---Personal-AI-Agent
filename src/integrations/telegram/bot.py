@@ -3,16 +3,78 @@
 # ============================================
 
 import logging
-from typing import Callable, Optional
+import os
+import re
+import tempfile
+from typing import Callable, Optional, List
 
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
 
 from integrations.base import BaseMessenger, Message
-from constants import MSG_BOT_STARTED
+from constants import MSG_BOT_STARTED, SUPPORTED_FILE_EXTENSIONS
+from utils.file_processor import process_file, is_supported_file
 
 # Set up logging
 logger = logging.getLogger(__name__)
+
+# Telegram message limit
+MAX_TELEGRAM_MESSAGE_LENGTH = 4000  # Leave some buffer from 4096
+
+
+def strip_markdown(text: str) -> str:
+    """Remove markdown formatting from text."""
+    # Remove code blocks
+    text = re.sub(r'```[\s\S]*?```', lambda m: m.group(0).replace('```', '').strip(), text)
+    # Remove inline code
+    text = re.sub(r'`([^`]+)`', r'\1', text)
+    # Remove bold
+    text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
+    text = re.sub(r'__([^_]+)__', r'\1', text)
+    # Remove italic (careful with bullet points)
+    text = re.sub(r'(?<![*\w])\*([^*]+)\*(?![*\w])', r'\1', text)
+    # Remove headers
+    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
+    # Remove links [text](url) -> text
+    text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
+    return text
+
+
+def split_message(text: str, max_length: int = MAX_TELEGRAM_MESSAGE_LENGTH) -> List[str]:
+    """Split long message into chunks for Telegram."""
+    if len(text) <= max_length:
+        return [text]
+
+    chunks = []
+    current_chunk = ""
+
+    # Split by paragraphs first
+    paragraphs = text.split('\n\n')
+
+    for para in paragraphs:
+        if len(current_chunk) + len(para) + 2 <= max_length:
+            current_chunk += para + '\n\n'
+        else:
+            if current_chunk:
+                chunks.append(current_chunk.strip())
+            # If single paragraph is too long, split by sentences
+            if len(para) > max_length:
+                sentences = para.replace('. ', '.\n').split('\n')
+                current_chunk = ""
+                for sentence in sentences:
+                    if len(current_chunk) + len(sentence) + 1 <= max_length:
+                        current_chunk += sentence + ' '
+                    else:
+                        if current_chunk:
+                            chunks.append(current_chunk.strip())
+                        current_chunk = sentence + ' '
+            else:
+                current_chunk = para + '\n\n'
+
+    if current_chunk.strip():
+        chunks.append(current_chunk.strip())
+
+    return chunks if chunks else [text[:max_length]]
 
 
 class TelegramBot(BaseMessenger):
@@ -45,7 +107,7 @@ class TelegramBot(BaseMessenger):
         Initialize and start the Telegram bot.
 
         - Build the application
-        - Add message handler
+        - Add message handlers
         - Start polling (webhook setup is in webhook.py)
         """
         # Build application
@@ -54,6 +116,11 @@ class TelegramBot(BaseMessenger):
         # Add handler for text messages
         self.application.add_handler(
             MessageHandler(filters.TEXT & ~filters.COMMAND, self._on_message)
+        )
+
+        # Add handler for documents (files)
+        self.application.add_handler(
+            MessageHandler(filters.Document.ALL, self._on_document)
         )
 
         # Initialize the application
@@ -76,6 +143,10 @@ class TelegramBot(BaseMessenger):
         """
         Send a message to a Telegram chat.
 
+        Handles:
+        - Stripping markdown for plain text
+        - Splitting long messages into chunks
+
         Args:
             chat_id: Telegram chat ID
             text: Message to send
@@ -84,13 +155,22 @@ class TelegramBot(BaseMessenger):
             True if sent successfully, False otherwise
         """
         try:
-            if self.application:
+            if not self.application:
+                return False
+
+            # Strip markdown formatting
+            clean_text = strip_markdown(text)
+
+            # Split into chunks if too long
+            chunks = split_message(clean_text)
+
+            for chunk in chunks:
                 await self.application.bot.send_message(
                     chat_id=int(chat_id),
-                    text=text
+                    text=chunk
                 )
-                return True
-            return False
+
+            return True
         except Exception as e:
             logger.error(f"Failed to send message: {e}")
             return False
@@ -139,3 +219,90 @@ class TelegramBot(BaseMessenger):
 
         # Process the message
         await self.handle_message(message)
+
+    async def _on_document(
+        self,
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        """
+        Handle incoming document/file uploads.
+
+        Downloads the file, extracts text, and processes as a message.
+
+        Args:
+            update: Telegram Update object
+            context: Telegram context
+        """
+        if not update.message or not update.message.document:
+            return
+
+        document = update.message.document
+        file_name = document.file_name or "unknown"
+        file_ext = os.path.splitext(file_name)[1].lower()
+
+        # Check if file type is supported
+        if file_ext not in SUPPORTED_FILE_EXTENSIONS:
+            await update.message.reply_text(
+                f"Sorry, I don't support {file_ext} files.\n\n"
+                f"Supported types: PDF, Word (.docx), Excel (.xlsx), CSV, "
+                f"Text (.txt, .md), JSON, and code files."
+            )
+            return
+
+        # Get caption (user's message with the file)
+        caption = update.message.caption or "Please analyze this file."
+
+        # Send processing message
+        processing_msg = await update.message.reply_text(
+            f"Processing {file_name}..."
+        )
+
+        try:
+            # Download file to temp directory
+            file = await context.bot.get_file(document.file_id)
+
+            with tempfile.NamedTemporaryFile(
+                suffix=file_ext,
+                delete=False
+            ) as tmp_file:
+                tmp_path = tmp_file.name
+                await file.download_to_drive(tmp_path)
+
+            # Process the file
+            result = process_file(tmp_path)
+
+            # Clean up temp file
+            os.unlink(tmp_path)
+
+            if not result.success:
+                await processing_msg.edit_text(f"Error processing file: {result.error}")
+                return
+
+            # Build message with file content
+            file_context = f"[File: {file_name}]\n"
+            if result.truncated:
+                file_context += "[Note: Content was truncated due to length]\n"
+            file_context += f"\n{result.text}\n\n"
+            file_context += f"User request: {caption}"
+
+            # Delete processing message
+            await processing_msg.delete()
+
+            # Create message object
+            message = Message(
+                user_id=str(update.effective_user.id),
+                chat_id=str(update.effective_chat.id),
+                text=file_context,
+                username=update.effective_user.username or update.effective_user.first_name,
+                platform="telegram"
+            )
+
+            # Process the message
+            await self.handle_message(message)
+
+        except Exception as e:
+            logger.error(f"Failed to process document: {e}")
+            await processing_msg.edit_text(
+                f"Sorry, I couldn't process the file: {str(e)}"
+            )

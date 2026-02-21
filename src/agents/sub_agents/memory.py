@@ -26,7 +26,8 @@ IMPORTANT:
 - Call ONE tool to complete the task
 - After the tool returns a result, respond with that result
 - Example: If tool returns "Remembered: favorite color is blue" → respond "Saved: your favorite color is blue"
-- Do NOT say generic things like "Anything else?" - confirm the specific action taken"""
+- Do NOT say generic things like "Anything else?" - confirm the specific action taken
+- Do NOT use markdown formatting - use plain text only"""
 
 
 class MemoryAgent(BaseSubAgent):

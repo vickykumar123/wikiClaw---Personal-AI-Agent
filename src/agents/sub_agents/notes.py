@@ -32,7 +32,8 @@ IMPORTANT:
 - Example: "Note this down: Meeting at 5pm" → title="Meeting reminder", content="Meeting at 5pm"
 - Do NOT ask for title - extract it from the message
 - Call ONE tool, then IMMEDIATELY respond with confirmation
-- Be concise - just confirm what was done"""
+- Be concise - just confirm what was done
+- Do NOT use markdown formatting - use plain text only"""
 
 
 class NotesAgent(BaseSubAgent):

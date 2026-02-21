@@ -24,7 +24,8 @@ IMPORTANT:
 - Call ONE tool (web_search or news_search) to complete the task
 - After results return, IMMEDIATELY summarize the key findings
 - Do NOT call multiple tools or the same tool twice
-- Be concise but informative in your summary"""
+- Be concise but informative in your summary
+- Do NOT use markdown formatting - use plain text only"""
 
 
 class WebAgent(BaseSubAgent):

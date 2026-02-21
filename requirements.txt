@@ -29,3 +29,8 @@ google-auth-httplib2
 pydantic  # Data validation
 python-dateutil  # Date parsing
 ddgs  # Web search (DuckDuckGo)
+
+# File Processing
+pdfplumber  # PDF text extraction
+python-docx  # Word document processing
+openpyxl  # Excel file processing
