@@ -11,10 +11,16 @@ from config import load_config, Config
 from constants import LOG_FORMAT, LOG_DATE_FORMAT, MSG_BOT_STARTED
 from integrations.telegram.bot import TelegramBot
 from integrations.telegram.webhook import WebhookServer
+from agent.llm import OllamaClient
+from agent.core import Agent
+from database.mongodb import MongoDB
+from memory.embeddings import EmbeddingsClient
 
 # Global references for shutdown handler
 webhook_server: Optional[WebhookServer] = None
 telegram_bot: Optional[TelegramBot] = None
+agent: Optional[Agent] = None
+db: Optional[MongoDB] = None
 
 
 def setup_logging() -> None:
@@ -29,21 +35,6 @@ def setup_logging() -> None:
         format=LOG_FORMAT,
         datefmt=LOG_DATE_FORMAT
     )
-
-
-async def echo_response(message) -> str:
-    """
-    Temporary echo response for testing.
-
-    Will be replaced by Agent in Phase 2.
-
-    Args:
-        message: Incoming Message object
-
-    Returns:
-        Echo response string
-    """
-    return f"Echo: {message.text}"
 
 
 async def shutdown(sig: Optional[signal.Signals] = None) -> None:
@@ -66,6 +57,10 @@ async def shutdown(sig: Optional[signal.Signals] = None) -> None:
     if telegram_bot:
         await telegram_bot.stop()
 
+    # Disconnect from MongoDB
+    if db:
+        await db.disconnect()
+
     logger.info("Shutdown complete")
 
 
@@ -81,7 +76,7 @@ async def main() -> None:
     6. Set webhook with Telegram
     7. Run server
     """
-    global webhook_server, telegram_bot
+    global webhook_server, telegram_bot, agent, db
 
     # Setup logging (sync - fast)
     setup_logging()
@@ -91,10 +86,38 @@ async def main() -> None:
     config = load_config()
     logger.info("Configuration loaded")
 
+    # Connect to MongoDB
+    db = MongoDB(uri=config.mongodb_uri)
+    await db.connect()
+
+    # Create Embeddings client
+    embeddings_client = EmbeddingsClient(api_key=config.openai_api_key)
+    logger.info("Embeddings client initialized")
+
+    # Create Ollama client
+    llm_client = OllamaClient(
+        host=config.ollama_host,
+        model=config.ollama_model
+    )
+
+    # Check Ollama connection
+    if await llm_client.health_check():
+        logger.info(f"Connected to Ollama: {config.ollama_model}")
+    else:
+        logger.warning("Ollama not reachable, but continuing...")
+
+    # Create Agent
+    agent = Agent(
+        llm_client=llm_client,
+        db=db,
+        embeddings_client=embeddings_client
+    )
+    logger.info("Agent initialized")
+
     # Create Telegram bot
     telegram_bot = TelegramBot(
         token=config.telegram_token,
-        message_callback=echo_response  # Temporary, will be Agent later
+        message_callback=agent.process_message
     )
 
     # Initialize the bot

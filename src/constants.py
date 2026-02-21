@@ -62,3 +62,17 @@ MSG_WEBHOOK_SET = "Webhook set successfully"
 # === Logging ===
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+# === Embeddings ===
+EMBEDDING_MODEL = "text-embedding-3-small"
+EMBEDDING_DIMENSIONS = 1536
+
+# === MongoDB Collections ===
+COLLECTION_CONTEXT = "context"
+COLLECTION_MESSAGES = "messages"
+COLLECTION_REMINDERS = "reminders"
+COLLECTION_NOTES = "notes"
+
+# === Vector Search ===
+VECTOR_INDEX_NAME = "context_index"
+NOTES_INDEX_NAME = "notes_index"
