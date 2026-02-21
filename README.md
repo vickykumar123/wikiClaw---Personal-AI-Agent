@@ -1,6 +1,8 @@
 # wikiClaw - Personal AI Agent
 
-A sophisticated personal AI assistant built with hierarchical multi-agent architecture. Designed for learning agentic AI development patterns used in modern AI systems like AutoGPT, Open Interpreter, and Claude.
+An open-source clone of [OpenClaw](https://openclaw.ai) - a sophisticated personal AI assistant built with hierarchical multi-agent architecture. Designed for learning agentic AI development patterns used in modern AI systems like AutoGPT, Open Interpreter, and Claude.
+
+> **Note:** This is a learning project that replicates core OpenClaw features to understand how agentic AI systems work under the hood.
 
 ## Overview
 
