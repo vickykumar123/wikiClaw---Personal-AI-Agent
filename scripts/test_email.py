@@ -92,7 +92,7 @@ async def test_email():
     message = Message(
         user_id=test_user_id,
         chat_id=test_chat_id,
-        text="Send an email to venomvvk@gmail.com with subject 'Test from AI Agent' and body 'Hello! This is a test email sent from your personal AI agent. It is working!'",
+        text="Send an email to test@gmail.com with subject 'Test from AI Agent' and body 'Hello! This is a test email sent from your personal AI agent. It is working!'",
         platform="test"
     )
 

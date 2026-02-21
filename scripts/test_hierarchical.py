@@ -210,7 +210,7 @@ async def test_hierarchical():
         message = Message(
             user_id=test_user_id,
             chat_id=test_chat_id,
-            text="Schedule a meeting for tomorrow at 3pm called 'Team Sync' and send an email to hunterxhunter2833@gmail.com about it.",
+            text="Schedule a meeting for tomorrow at 3pm called 'Team Sync' and send an email to test@gmail.com about it.",
             platform="test"
         )
 
