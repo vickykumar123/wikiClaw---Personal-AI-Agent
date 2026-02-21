@@ -155,6 +155,22 @@ class GoogleCalendarClient:
             logger.error(f"Failed to create event: {e}")
             return None
 
+    def _format_datetime_for_api(self, dt: datetime) -> str:
+        """
+        Format datetime for Google Calendar API.
+
+        Google expects RFC3339 format with Z suffix for UTC.
+        """
+        # If timezone-aware, convert to UTC and format
+        if dt.tzinfo is not None:
+            # Convert to UTC
+            utc_dt = dt.astimezone(timezone.utc)
+            # Format without timezone info, add Z
+            return utc_dt.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+        else:
+            # Naive datetime - assume UTC
+            return dt.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
+
     async def list_events(
         self,
         max_results: int = 10,
@@ -181,14 +197,14 @@ class GoogleCalendarClient:
 
             params = {
                 "calendarId": "primary",
-                "timeMin": time_min.isoformat() + "Z",
+                "timeMin": self._format_datetime_for_api(time_min),
                 "maxResults": max_results,
                 "singleEvents": True,
                 "orderBy": "startTime"
             }
 
             if time_max:
-                params["timeMax"] = time_max.isoformat() + "Z"
+                params["timeMax"] = self._format_datetime_for_api(time_max)
 
             events_result = self.service.events().list(**params).execute()
 
@@ -221,7 +237,7 @@ class GoogleCalendarClient:
         try:
             events_result = self.service.events().list(
                 calendarId="primary",
-                timeMin=datetime.now(timezone.utc).isoformat() + "Z",
+                timeMin=self._format_datetime_for_api(datetime.now(timezone.utc)),
                 maxResults=max_results,
                 singleEvents=True,
                 orderBy="startTime",
