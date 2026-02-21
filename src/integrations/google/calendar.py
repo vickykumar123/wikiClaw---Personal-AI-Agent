@@ -15,7 +15,10 @@ from googleapiclient.discovery import build
 logger = logging.getLogger(__name__)
 
 # OAuth scopes
-SCOPES = ["https://www.googleapis.com/auth/calendar"]
+SCOPES = [
+    "https://www.googleapis.com/auth/calendar",
+    "https://www.googleapis.com/auth/gmail.send"
+]
 
 
 class GoogleCalendarClient:

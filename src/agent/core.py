@@ -17,7 +17,9 @@ from tools.memory import SearchMemoryTool, SaveMemoryTool
 from tools.notes import CreateNoteTool, SearchNotesTool, ListNotesTool, DeleteNoteTool
 from tools.calendar import CreateEventTool, ListEventsTool, SearchEventsTool, DeleteEventTool
 from tools.websearch import WebSearchTool, NewsSearchTool
+from tools.email import SendEmailTool
 from integrations.google.calendar import GoogleCalendarClient
+from integrations.google.gmail import GmailClient
 from constants import MAX_RECENT_MESSAGES
 
 # Set up logging
@@ -42,7 +44,8 @@ class Agent:
         llm_client: OllamaClient,
         db: MongoDB,
         embeddings_client: EmbeddingsClient,
-        calendar_client: Optional[GoogleCalendarClient] = None
+        calendar_client: Optional[GoogleCalendarClient] = None,
+        gmail_client: Optional[GmailClient] = None
     ):
         """
         Initialize the agent.
@@ -52,11 +55,13 @@ class Agent:
             db: MongoDB connection for storage
             embeddings_client: OpenAI embeddings client
             calendar_client: Google Calendar client (optional)
+            gmail_client: Gmail client (optional)
         """
         self.llm = llm_client
         self.db = db
         self.embeddings = embeddings_client
         self.calendar = calendar_client
+        self.gmail = gmail_client
 
     def _get_tools_for_user(self, user_id: str) -> List[BaseTool]:
         """
@@ -115,6 +120,10 @@ class Agent:
             WebSearchTool(),
             NewsSearchTool()
         ])
+
+        # Email tool if Gmail client is available
+        if self.gmail:
+            tools.append(SendEmailTool(gmail_client=self.gmail))
 
         return tools
 

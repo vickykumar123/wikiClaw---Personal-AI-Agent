@@ -34,6 +34,7 @@ Tool usage:
 - delete_event: When user asks to cancel or remove an event
 - web_search: When user asks about current info, facts, or anything requiring web lookup
 - news_search: When user asks about recent news or current events
+- send_email: When user asks to send an email to someone
 
 IMPORTANT tool behavior:
 - Call tools only when necessary
