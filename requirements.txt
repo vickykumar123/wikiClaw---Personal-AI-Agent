@@ -1,0 +1,29 @@
+# Telegram Bot
+python-telegram-bot==22.6
+
+# Web Server (Webhook) - includes uvicorn
+fastapi[standard]
+
+# HTTP Client (for Ollama API)
+httpx==0.27.2
+
+# Environment Variables
+python-dotenv==1.0.1
+
+# MongoDB
+pymongo==4.16.0
+motor  # Async MongoDB driver
+
+# OpenAI (Embeddings)
+openai==2.21.0
+
+# ngrok (Tunnel)
+pyngrok
+
+# Google Calendar
+google-api-python-client
+google-auth-oauthlib
+google-auth-httplib2
+
+# Utilities
+pydantic  # Data validation

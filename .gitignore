@@ -1,0 +1,34 @@
+# Environment variables
+.env
+
+# Google credentials
+credentials.json
+token.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Data
+data/summaries/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+credentials.json
+token.json
+CLAUDE.md
+skill.md
+PROJECT_SPEC.md
