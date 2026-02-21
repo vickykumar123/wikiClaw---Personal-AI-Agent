@@ -4,6 +4,9 @@ An open-source clone of [OpenClaw](https://openclaw.ai) - a sophisticated person
 
 > **Note:** This is a learning project that replicates core OpenClaw features to understand how agentic AI systems work under the hood.
 
+<img width="1428" height="938" alt="image" src="https://github.com/user-attachments/assets/c3ac3c0e-05be-4f11-a8dc-ce7be99b5172" />
+
+
 ## Overview
 
 wikiClaw is not just another chatbot - it's a fully autonomous agent capable of:
