@@ -98,6 +98,7 @@ class WebhookServer:
         @self.app.get("/test")
         async def test_endpoint():
             """Simple test endpoint to verify server is operational."""
+            _log_event("test_endpoint_called")
             return {"status": "ok", "message": "Test endpoint reachable"}
 
         @self.app.post("/webhook/telegram")
@@ -251,6 +252,7 @@ class WebhookServer:
 
         Use this for simple single-server deployment.
         """
+        _log_event("server_run_sync", host="0.0.0.0", port=self.port)
         uvicorn.run(
             self.app,
             host="0.0.0.0",
@@ -264,6 +266,7 @@ class WebhookServer:
 
         Use this when integrating with other async code.
         """
+        _log_event("server_run_async", host="0.0.0.0", port=self.port)
         config = uvicorn.Config(
             self.app,
             host="0.0.0.0",
@@ -272,3 +275,4 @@ class WebhookServer:
         )
         server = uvicorn.Server(config)
         await server.serve()
+
