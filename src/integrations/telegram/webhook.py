@@ -4,6 +4,7 @@
 
 import logging
 import asyncio
+import json
 from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
 
@@ -68,6 +69,7 @@ class WebhookServer:
         @self.app.get("/health")
         async def health_check():
             """Health check endpoint."""
+            logger.info("Health check endpoint called")
             return {"status": "ok"}
 
         @self.app.post("/webhook/telegram")
@@ -83,6 +85,12 @@ class WebhookServer:
             try:
                 # Parse the update
                 data = await request.json()
+                # Log receipt with truncated pretty JSON
+                try:
+                    pretty = json.dumps(data, indent=2)
+                except Exception:
+                    pretty = str(data)
+                logger.info(f"Received Telegram webhook: {pretty[:500]}")
                 update = Update.de_json(data, self._telegram_bot.application.bot)
 
                 # Process the update
@@ -98,6 +106,7 @@ class WebhookServer:
         @self.app.post("/webhook/whatsapp")
         async def whatsapp_webhook(request: Request):
             """Handle incoming WhatsApp webhook (future)."""
+            logger.info("Received WhatsApp webhook request")
             return {"ok": True, "message": "WhatsApp webhook not implemented yet"}
 
     @asynccontextmanager
@@ -110,9 +119,12 @@ class WebhookServer:
         """
         # Startup
         logger.info(f"Starting webhook server on port {self.port}")
+        logger.info("Webhook server startup sequence initiated")
         yield
         # Shutdown
+        logger.info("Webhook server shutdown sequence initiated")
         await self._stop_ngrok()
+        logger.info("Webhook server shutdown complete")
 
     def register_telegram_bot(self, bot) -> None:
         """
@@ -134,6 +146,7 @@ class WebhookServer:
         if self.ngrok_auth_token:
             ngrok.set_auth_token(self.ngrok_auth_token)
 
+        logger.info(f"Starting ngrok tunnel on port {self.port}")
         # Start tunnel
         self.ngrok_tunnel = ngrok.connect(self.port, "http")
         self.webhook_url = self.ngrok_tunnel.public_url
