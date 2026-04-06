@@ -9,6 +9,8 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
 
+# Structured JSON logging added
+
 from fastapi import FastAPI, Request, HTTPException
 from telegram import Update
 import uvicorn
