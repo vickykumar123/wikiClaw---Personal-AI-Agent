@@ -5,7 +5,7 @@
 import logging
 import asyncio
 import json
-import datetime
+from datetime import datetime
 from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
 
@@ -33,11 +33,15 @@ def _log_event(event: str, **kwargs) -> None:
         **kwargs: Additional key/value pairs to include in the log.
     """
     payload = {
-        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.utcnow().isoformat() + "Z",
         "event": event,
         **kwargs,
     }
-    logger.info(json.dumps(payload))
+    # Use logger.info for all structured logs; include exc_info if provided in kwargs
+    if kwargs.get("exc_info"):
+        logger.info(json.dumps(payload), exc_info=True)
+    else:
+        logger.info(json.dumps(payload))
 
 
 class WebhookServer:
@@ -70,6 +74,13 @@ class WebhookServer:
         # Platform handlers - will be registered by each platform
         self._telegram_bot = None
 
+        # Log server initialization (structured)
+        _log_event(
+            "webhook_init",
+            port=self.port,
+            ngrok_auth_token=bool(self.ngrok_auth_token),
+        )
+
         # Create FastAPI app
         self.app = FastAPI(
             title="AI Agent Webhook Server",
@@ -78,13 +89,6 @@ class WebhookServer:
 
         # Register routes
         self._setup_routes()
-
-        # Log server initialization
-        _log_event(
-            "server_init",
-            port=self.port,
-            ngrok_auth_token=self.ngrok_auth_token,
-        )
 
     def _setup_routes(self) -> None:
         """Set up webhook endpoints for each platform."""
@@ -134,8 +138,7 @@ class WebhookServer:
                 return {"ok": True}
 
             except Exception as e:
-                logger.error(f"Error processing Telegram webhook: {e}", exc_info=True)
-                _log_event("telegram_webhook_error", error=str(e))
+                _log_event("telegram_webhook_error", error=str(e), exc_info=True)
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Placeholder for future platforms
@@ -168,7 +171,7 @@ class WebhookServer:
             bot: TelegramBot instance
         """
         self._telegram_bot = bot
-        _log_event("telegram_bot_registered")
+        _log_event("telegram_bot_registered", bot_class=bot.__class__.__name__)
 
     async def start_ngrok(self) -> str:
         """
@@ -189,14 +192,17 @@ class WebhookServer:
         if self.webhook_url.startswith("http://"):
             self.webhook_url = self.webhook_url.replace("http://", "https://")
 
-        _log_event("ngrok_ready", url=self.webhook_url)
+        _log_event("ngrok_ready", public_url=self.webhook_url)
         return self.webhook_url
 
     async def _stop_ngrok(self) -> None:
         """Stop ngrok tunnel."""
         if self.ngrok_tunnel:
             ngrok.disconnect(self.ngrok_tunnel.public_url)
-            _log_event("ngrok_stop", url=self.ngrok_tunnel.public_url)
+            _log_event(
+                "ngrok_stop",
+                public_url=self.ngrok_tunnel.public_url if self.ngrok_tunnel else None,
+            )
 
     async def set_telegram_webhook(self) -> bool:
         """
@@ -206,8 +212,7 @@ class WebhookServer:
             True if successful
         """
         if not self._telegram_bot or not self.webhook_url:
-            logger.error(ERROR_WEBHOOK_SETUP, exc_info=True)
-            _log_event("set_telegram_webhook_failure", reason="missing bot or webhook_url")
+            _log_event("set_telegram_webhook_error", error=ERROR_WEBHOOK_SETUP, exc_info=True)
             return False
 
         _log_event("set_telegram_webhook_attempt")
@@ -219,12 +224,10 @@ class WebhookServer:
             )
 
             _log_event("set_telegram_webhook_success", url=webhook_full_url)
-            logger.info(f"{MSG_WEBHOOK_SET}: {webhook_full_url}")
             return True
 
         except Exception as e:
-            logger.error(f"{ERROR_WEBHOOK_SETUP}: {e}", exc_info=True)
-            _log_event("set_telegram_webhook_failure", error=str(e))
+            _log_event("set_telegram_webhook_error", error=str(e), exc_info=True)
             return False
 
     async def remove_telegram_webhook(self) -> bool:
@@ -239,11 +242,9 @@ class WebhookServer:
             if self._telegram_bot:
                 await self._telegram_bot.application.bot.delete_webhook()
                 _log_event("remove_telegram_webhook_success")
-                logger.info("Telegram webhook removed")
             return True
         except Exception as e:
-            logger.error(f"Failed to remove webhook: {e}", exc_info=True)
-            _log_event("remove_telegram_webhook_failure", error=str(e))
+            _log_event("remove_telegram_webhook_error", error=str(e), exc_info=True)
             return False
 
     def run(self) -> None:
