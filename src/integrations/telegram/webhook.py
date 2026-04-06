@@ -4,6 +4,8 @@
 
 import logging
 import asyncio
+import json
+import datetime
 from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
 
@@ -21,6 +23,21 @@ from constants import (
 
 # Set up logging
 logger = logging.getLogger(__name__)
+
+
+def _log_event(event: str, **kwargs) -> None:
+    """Log a structured JSON event with a UTC timestamp.
+
+    Args:
+        event: Name of the event.
+        **kwargs: Additional key/value pairs to include in the log.
+    """
+    payload = {
+        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+        "event": event,
+        **kwargs,
+    }
+    logger.info(json.dumps(payload))
 
 
 class WebhookServer:
@@ -62,12 +79,20 @@ class WebhookServer:
         # Register routes
         self._setup_routes()
 
+        # Log server initialization
+        _log_event(
+            "server_init",
+            port=self.port,
+            ngrok_auth_token=self.ngrok_auth_token,
+        )
+
     def _setup_routes(self) -> None:
         """Set up webhook endpoints for each platform."""
 
         @self.app.get("/health")
         async def health_check():
             """Health check endpoint."""
+            _log_event("health_check")
             return {"status": "ok"}
 
         @self.app.get("/test")
@@ -88,21 +113,35 @@ class WebhookServer:
             try:
                 # Parse the update
                 data = await request.json()
+                # Log receipt with truncated payload and possible update_id
+                truncated = json.dumps(data)[:200]
+                update_id = data.get("update_id")
+                _log_event(
+                    "telegram_webhook_received",
+                    payload=truncated,
+                    update_id=update_id,
+                )
                 update = Update.de_json(data, self._telegram_bot.application.bot)
 
                 # Process the update
                 await self._telegram_bot.application.process_update(update)
 
+                _log_event(
+                    "telegram_webhook_processed",
+                    update_id=getattr(update, "update_id", None),
+                )
                 return {"ok": True}
 
             except Exception as e:
-                logger.error(f"Error processing Telegram webhook: {e}")
+                logger.error(f"Error processing Telegram webhook: {e}", exc_info=True)
+                _log_event("telegram_webhook_error", error=str(e))
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Placeholder for future platforms
         @self.app.post("/webhook/whatsapp")
         async def whatsapp_webhook(request: Request):
             """Handle incoming WhatsApp webhook (future)."""
+            _log_event("whatsapp_webhook_called")
             return {"ok": True, "message": "WhatsApp webhook not implemented yet"}
 
     @asynccontextmanager
@@ -114,9 +153,10 @@ class WebhookServer:
         - On shutdown: Close tunnel
         """
         # Startup
-        logger.info(f"Starting webhook server on port {self.port}")
+        _log_event("server_startup", port=self.port)
         yield
         # Shutdown
+        _log_event("server_shutdown")
         await self._stop_ngrok()
 
     def register_telegram_bot(self, bot) -> None:
@@ -127,7 +167,7 @@ class WebhookServer:
             bot: TelegramBot instance
         """
         self._telegram_bot = bot
-        logger.info("Telegram bot registered with webhook server")
+        _log_event("telegram_bot_registered")
 
     async def start_ngrok(self) -> str:
         """
@@ -136,6 +176,7 @@ class WebhookServer:
         Returns:
             Public HTTPS URL for webhooks
         """
+        _log_event("ngrok_start", port=self.port)
         if self.ngrok_auth_token:
             ngrok.set_auth_token(self.ngrok_auth_token)
 
@@ -147,14 +188,14 @@ class WebhookServer:
         if self.webhook_url.startswith("http://"):
             self.webhook_url = self.webhook_url.replace("http://", "https://")
 
-        logger.info(f"ngrok tunnel started: {self.webhook_url}")
+        _log_event("ngrok_ready", url=self.webhook_url)
         return self.webhook_url
 
     async def _stop_ngrok(self) -> None:
         """Stop ngrok tunnel."""
         if self.ngrok_tunnel:
             ngrok.disconnect(self.ngrok_tunnel.public_url)
-            logger.info("ngrok tunnel stopped")
+            _log_event("ngrok_stop", url=self.ngrok_tunnel.public_url)
 
     async def set_telegram_webhook(self) -> bool:
         """
@@ -164,9 +205,11 @@ class WebhookServer:
             True if successful
         """
         if not self._telegram_bot or not self.webhook_url:
-            logger.error(ERROR_WEBHOOK_SETUP)
+            logger.error(ERROR_WEBHOOK_SETUP, exc_info=True)
+            _log_event("set_telegram_webhook_failure", reason="missing bot or webhook_url")
             return False
 
+        _log_event("set_telegram_webhook_attempt")
         try:
             webhook_full_url = f"{self.webhook_url}/webhook/telegram"
 
@@ -174,11 +217,13 @@ class WebhookServer:
                 url=webhook_full_url
             )
 
+            _log_event("set_telegram_webhook_success", url=webhook_full_url)
             logger.info(f"{MSG_WEBHOOK_SET}: {webhook_full_url}")
             return True
 
         except Exception as e:
-            logger.error(f"{ERROR_WEBHOOK_SETUP}: {e}")
+            logger.error(f"{ERROR_WEBHOOK_SETUP}: {e}", exc_info=True)
+            _log_event("set_telegram_webhook_failure", error=str(e))
             return False
 
     async def remove_telegram_webhook(self) -> bool:
@@ -188,13 +233,16 @@ class WebhookServer:
         Returns:
             True if successful
         """
+        _log_event("remove_telegram_webhook_attempt")
         try:
             if self._telegram_bot:
                 await self._telegram_bot.application.bot.delete_webhook()
+                _log_event("remove_telegram_webhook_success")
                 logger.info("Telegram webhook removed")
             return True
         except Exception as e:
-            logger.error(f"Failed to remove webhook: {e}")
+            logger.error(f"Failed to remove webhook: {e}", exc_info=True)
+            _log_event("remove_telegram_webhook_failure", error=str(e))
             return False
 
     def run(self) -> None:
