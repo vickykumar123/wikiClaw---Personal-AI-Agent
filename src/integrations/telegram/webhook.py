@@ -2,7 +2,7 @@
 # WEBHOOK SERVER - Single server for all platforms
 # ============================================
 
-# Formatted with black
+# Structured JSON logging added
 
 import logging
 import asyncio
