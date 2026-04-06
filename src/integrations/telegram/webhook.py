@@ -12,6 +12,10 @@ from telegram import Update
 import uvicorn
 from pyngrok import ngrok
 
+# Import database and LLM client
+from src.database.mongodb import MongoDB
+from src.agent.llm import OllamaClient
+
 from constants import (
     DEFAULT_WEBHOOK_PORT,
     DEFAULT_WEBHOOK_PATH,
@@ -53,6 +57,10 @@ class WebhookServer:
         # Platform handlers - will be registered by each platform
         self._telegram_bot = None
 
+        # Optional components that can be registered later
+        self.db: Optional[MongoDB] = None
+        self.llm: Optional[OllamaClient] = None
+
         # Create FastAPI app
         self.app = FastAPI(
             title="AI Agent Webhook Server",
@@ -62,13 +70,80 @@ class WebhookServer:
         # Register routes
         self._setup_routes()
 
+    # ---------------------------------------------------------------------
+    # Component registration helpers
+    # ---------------------------------------------------------------------
+    def register_db(self, db: MongoDB) -> None:
+        """Register a MongoDB instance for health checks.
+
+        Args:
+            db: An instantiated MongoDB client (already connected or not).
+        """
+        self.db = db
+        logger.info("MongoDB instance registered with webhook server")
+
+    def register_llm(self, llm: OllamaClient) -> None:
+        """Register an OllamaClient instance for health checks.
+
+        Args:
+            llm: An instantiated OllamaClient.
+        """
+        self.llm = llm
+        logger.info("Ollama LLM client registered with webhook server")
+
+    # ---------------------------------------------------------------------
     def _setup_routes(self) -> None:
         """Set up webhook endpoints for each platform."""
 
         @self.app.get("/health")
         async def health_check():
-            """Health check endpoint."""
-            return {"status": "ok"}
+            """Health check endpoint with optional component status.
+
+            Returns a JSON payload containing overall status and the status of
+            any registered components (MongoDB and LLM). If a component is not
+            registered its status will be ``null``.
+            """
+            overall_status = "ok"
+            component_status: Dict[str, Any] = {
+                "mongodb": None,
+                "llm": None,
+            }
+
+            # Check MongoDB if registered
+            if self.db is not None:
+                try:
+                    # Ensure client is connected; ping will also connect if needed
+                    if getattr(self.db, "client", None) is None:
+                        await self.db.connect()
+                    else:
+                        await self.db.client.admin.command("ping")
+                    component_status["mongodb"] = "ok"
+                except Exception as e:
+                    logger.error(f"MongoDB health check failed: {e}")
+                    component_status["mongodb"] = "error"
+                    overall_status = "error"
+
+            # Check LLM if registered
+            if self.llm is not None:
+                try:
+                    healthy = await self.llm.health_check()
+                    component_status["llm"] = "ok" if healthy else "error"
+                    if not healthy:
+                        overall_status = "error"
+                except Exception as e:
+                    logger.error(f"LLM health check failed: {e}")
+                    component_status["llm"] = "error"
+                    overall_status = "error"
+
+            return {
+                "status": overall_status,
+                "components": component_status,
+            }
+
+        @self.app.get("/test")
+        async def test_endpoint():
+            """Simple test endpoint to verify server is operational."""
+            return {"status": "ok", "message": "Test endpoint reachable"}
 
         @self.app.post("/webhook/telegram")
         async def telegram_webhook(request: Request):
