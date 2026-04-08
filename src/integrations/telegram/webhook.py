@@ -92,6 +92,7 @@ class WebhookServer:
 
                 # Process the update
                 await self._telegram_bot.application.process_update(update)
+                logger.info('Telegram update processed successfully', extra={'update_id': update.update_id})
 
                 return {"ok": True}
 
