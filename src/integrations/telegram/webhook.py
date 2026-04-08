@@ -198,11 +198,12 @@ class WebhookServer:
         """
         try:
             if self._telegram_bot:
+                logger.info("Removing Telegram webhook")
                 await self._telegram_bot.application.bot.delete_webhook()
                 logger.info("Telegram webhook removed")
             return True
         except Exception as e:
-            logger.error(f"Failed to remove webhook: {e}")
+            logger.exception(f"Failed to remove webhook: {e}")
             return False
 
     def run(self) -> None:
