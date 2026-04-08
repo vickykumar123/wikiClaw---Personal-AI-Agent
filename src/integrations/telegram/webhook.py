@@ -89,6 +89,7 @@ class WebhookServer:
                 logger.debug(f"Telegram webhook payload: {str(data)[:200]}")
                 update = Update.de_json(data, self._telegram_bot.application.bot)
                 logger.debug(f"Update received: id={update.update_id}, type={type(update)}")
+                logger.info(f"Processing Telegram update id={update.update_id}")
 
                 # Process the update
                 await self._telegram_bot.application.process_update(update)
@@ -142,9 +143,11 @@ class WebhookServer:
 
         try:
             logger.info(f"Starting ngrok tunnel on port {self.port}")
+            logger.debug(f"Attempting to start ngrok tunnel on port {self.port}")
             # Start tunnel
             self.ngrok_tunnel = ngrok.connect(self.port, "http")
             self.webhook_url = self.ngrok_tunnel.public_url
+            logger.debug(f"ngrok public URL obtained: {self.webhook_url}")
 
             # Ensure HTTPS
             if self.webhook_url.startswith("http://"):
@@ -178,9 +181,11 @@ class WebhookServer:
 
             logger.info(f"Attempting to set Telegram webhook: {webhook_full_url}")
 
+            logger.debug(f"Setting Telegram webhook to URL: {webhook_full_url}")
             await self._telegram_bot.application.bot.set_webhook(
                 url=webhook_full_url
             )
+            logger.debug(f"Telegram webhook set successfully: {webhook_full_url}")
 
             logger.info(f"{MSG_WEBHOOK_SET}: {webhook_full_url}")
             return True
@@ -199,7 +204,9 @@ class WebhookServer:
         try:
             if self._telegram_bot:
                 logger.info("Removing Telegram webhook")
+                logger.debug("Attempting to delete Telegram webhook")
                 await self._telegram_bot.application.bot.delete_webhook()
+                logger.debug("Telegram webhook successfully deleted")
                 logger.info("Telegram webhook removed")
             return True
         except Exception as e:
