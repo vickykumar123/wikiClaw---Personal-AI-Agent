@@ -80,6 +80,7 @@ class WebhookServer:
             """
             logger.info(f"Received Telegram webhook request from {request.client.host} at {request.headers.get('date', 'unknown')}")
             if not self._telegram_bot:
+                logger.warning("Telegram bot not configured")
                 raise HTTPException(status_code=503, detail="Telegram bot not configured")
 
             try:
