@@ -97,7 +97,7 @@ class WebhookServer:
                 return {"ok": True}
 
             except Exception as e:
-                logger.error(f"Error processing Telegram webhook: {e}")
+                logger.exception(f"Error processing Telegram webhook from {request.client.host}: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Placeholder for future platforms
