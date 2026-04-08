@@ -34,16 +34,19 @@ class SearchMemoryTool(BaseTool):
             embeddings_client: OpenAI embeddings client
             user_id: Current user's ID (for filtering)
         """
+        logger.info('Entering SearchMemoryTool.__init__')
         self.db = db
         self.embeddings = embeddings_client
         self.user_id = user_id
 
     @property
     def name(self) -> str:
+        logger.info('Entering SearchMemoryTool.name')
         return "search_memory"
 
     @property
     def description(self) -> str:
+        logger.info('Entering SearchMemoryTool.description')
         return (
             "Search your memory for information about the user. "
             "Use this when the user asks about their preferences, "
@@ -53,6 +56,7 @@ class SearchMemoryTool(BaseTool):
 
     @property
     def parameters(self) -> Dict[str, Any]:
+        logger.info('Entering SearchMemoryTool.parameters')
         return {
             "type": "object",
             "properties": {
@@ -75,6 +79,7 @@ class SearchMemoryTool(BaseTool):
         Returns:
             ToolResult with matching context entries
         """
+        logger.info('Entering SearchMemoryTool.execute')
         try:
             logger.info(f"Searching memory for: {query}")
 
@@ -126,16 +131,19 @@ class SaveMemoryTool(BaseTool):
         embeddings_client: EmbeddingsClient,
         user_id: str
     ):
+        logger.info('Entering SaveMemoryTool.__init__')
         self.db = db
         self.embeddings = embeddings_client
         self.user_id = user_id
 
     @property
     def name(self) -> str:
+        logger.info('Entering SaveMemoryTool.name')
         return "save_memory"
 
     @property
     def description(self) -> str:
+        logger.info('Entering SaveMemoryTool.description')
         return (
             "Save important information about the user to memory. "
             "Use this when the user shares personal info, preferences, "
@@ -146,6 +154,7 @@ class SaveMemoryTool(BaseTool):
 
     @property
     def parameters(self) -> Dict[str, Any]:
+        logger.info('Entering SaveMemoryTool.parameters')
         return {
             "type": "object",
             "properties": {
@@ -174,6 +183,7 @@ class SaveMemoryTool(BaseTool):
         Returns:
             ToolResult indicating success/failure
         """
+        logger.info('Entering SaveMemoryTool.execute')
         # Handle LLM sending 'type' instead of 'memory_type'
         if memory_type is None:
             memory_type = kwargs.get('type', 'fact')
