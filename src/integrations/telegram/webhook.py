@@ -140,16 +140,21 @@ class WebhookServer:
         if self.ngrok_auth_token:
             ngrok.set_auth_token(self.ngrok_auth_token)
 
-        # Start tunnel
-        self.ngrok_tunnel = ngrok.connect(self.port, "http")
-        self.webhook_url = self.ngrok_tunnel.public_url
+        try:
+            logger.info(f"Starting ngrok tunnel on port {self.port}")
+            # Start tunnel
+            self.ngrok_tunnel = ngrok.connect(self.port, "http")
+            self.webhook_url = self.ngrok_tunnel.public_url
 
-        # Ensure HTTPS
-        if self.webhook_url.startswith("http://"):
-            self.webhook_url = self.webhook_url.replace("http://", "https://")
+            # Ensure HTTPS
+            if self.webhook_url.startswith("http://"):
+                self.webhook_url = self.webhook_url.replace("http://", "https://")
 
-        logger.info(f"ngrok tunnel started: {self.webhook_url}")
-        return self.webhook_url
+            logger.info(f"ngrok tunnel started: {self.webhook_url}")
+            return self.webhook_url
+        except Exception as e:
+            logger.exception(f"Failed to start ngrok tunnel: {e}")
+            raise
 
     async def _stop_ngrok(self) -> None:
         """Stop ngrok tunnel."""
