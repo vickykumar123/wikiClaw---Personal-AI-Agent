@@ -86,6 +86,7 @@ class WebhookServer:
             try:
                 # Parse the update
                 data = await request.json()
+                logger.debug(f"Telegram webhook payload: {str(data)[:200]}")
                 update = Update.de_json(data, self._telegram_bot.application.bot)
 
                 # Process the update
