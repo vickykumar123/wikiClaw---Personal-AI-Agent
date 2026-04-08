@@ -10,6 +10,10 @@ from integrations.google.gmail import GmailClient
 from tools.base import BaseTool
 from tools.email import SendEmailTool
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 EMAIL_AGENT_PROMPT = """You are an email agent.
 
@@ -36,6 +40,7 @@ class EmailAgent(BaseSubAgent):
         gmail_client: GmailClient
     ):
         super().__init__(llm_client)
+        logger.debug(f"EmailAgent initialized with llm_client={llm_client}, gmail_client={gmail_client}")
         self.gmail = gmail_client
 
     @property
@@ -52,9 +57,18 @@ class EmailAgent(BaseSubAgent):
 
     @property
     def system_prompt(self) -> str:
+        logger.debug("Accessed system_prompt")
         return EMAIL_AGENT_PROMPT
 
     def get_tools(self) -> List[BaseTool]:
-        return [
-            SendEmailTool(gmail_client=self.gmail)
-        ]
+        logger.debug("Entering get_tools")
+        try:
+            tools = [
+                SendEmailTool(gmail_client=self.gmail)
+            ]
+            tool_names = [type(t).__name__ for t in tools]
+            logger.debug(f"Returning tools: {tool_names}")
+            return tools
+        except Exception as e:
+            logger.error("Error in get_tools", exc_info=True)
+            raise
