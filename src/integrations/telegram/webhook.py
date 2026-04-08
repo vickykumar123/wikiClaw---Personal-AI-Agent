@@ -176,6 +176,8 @@ class WebhookServer:
         try:
             webhook_full_url = f"{self.webhook_url}/webhook/telegram"
 
+            logger.info(f"Attempting to set Telegram webhook: {webhook_full_url}")
+
             await self._telegram_bot.application.bot.set_webhook(
                 url=webhook_full_url
             )
@@ -184,7 +186,7 @@ class WebhookServer:
             return True
 
         except Exception as e:
-            logger.error(f"{ERROR_WEBHOOK_SETUP}: {e}")
+            logger.exception(f"{ERROR_WEBHOOK_SETUP}: {e}")
             return False
 
     async def remove_telegram_webhook(self) -> bool:
