@@ -22,16 +22,19 @@ class CreateNoteTool(BaseTool):
         embeddings_client: EmbeddingsClient,
         user_id: str
     ):
+        logger.info('Entering CreateNoteTool.__init__')
         self.db = db
         self.embeddings = embeddings_client
         self.user_id = user_id
 
     @property
     def name(self) -> str:
+        logger.info('Entering CreateNoteTool.name')
         return "create_note"
 
     @property
     def description(self) -> str:
+        logger.info('Entering CreateNoteTool.description')
         return (
             "Create a new note with a title and content. "
             "Use this when the user explicitly asks to save/create a note, "
@@ -41,6 +44,7 @@ class CreateNoteTool(BaseTool):
 
     @property
     def parameters(self) -> Dict[str, Any]:
+        logger.info('Entering CreateNoteTool.parameters')
         return {
             "type": "object",
             "properties": {
@@ -68,6 +72,7 @@ class CreateNoteTool(BaseTool):
         tags: List[str] = None
     ) -> ToolResult:
         """Create a new note."""
+        logger.info('Entering CreateNoteTool.execute')
         try:
             logger.info(f"Creating note: {title}")
 
@@ -111,16 +116,19 @@ class SearchNotesTool(BaseTool):
         embeddings_client: EmbeddingsClient,
         user_id: str
     ):
+        logger.info('Entering SearchNotesTool.__init__')
         self.db = db
         self.embeddings = embeddings_client
         self.user_id = user_id
 
     @property
     def name(self) -> str:
+        logger.info('Entering SearchNotesTool.name')
         return "search_notes"
 
     @property
     def description(self) -> str:
+        logger.info('Entering SearchNotesTool.description')
         return (
             "Search through user's notes using semantic search. "
             "Use this when the user asks to find a note, "
@@ -129,6 +137,7 @@ class SearchNotesTool(BaseTool):
 
     @property
     def parameters(self) -> Dict[str, Any]:
+        logger.info('Entering SearchNotesTool.parameters')
         return {
             "type": "object",
             "properties": {
@@ -142,6 +151,7 @@ class SearchNotesTool(BaseTool):
 
     async def execute(self, query: str) -> ToolResult:
         """Search notes by content."""
+        logger.info('Entering SearchNotesTool.execute')
         try:
             logger.info(f"Searching notes for: {query}")
 
@@ -185,15 +195,18 @@ class ListNotesTool(BaseTool):
     """Tool for listing all notes."""
 
     def __init__(self, db: MongoDB, user_id: str):
+        logger.info('Entering ListNotesTool.__init__')
         self.db = db
         self.user_id = user_id
 
     @property
     def name(self) -> str:
+        logger.info('Entering ListNotesTool.name')
         return "list_notes"
 
     @property
     def description(self) -> str:
+        logger.info('Entering ListNotesTool.description')
         return (
             "List all notes or notes with a specific tag. "
             "Use this when the user asks to see all their notes, "
@@ -202,6 +215,7 @@ class ListNotesTool(BaseTool):
 
     @property
     def parameters(self) -> Dict[str, Any]:
+        logger.info('Entering ListNotesTool.parameters')
         return {
             "type": "object",
             "properties": {
@@ -215,6 +229,7 @@ class ListNotesTool(BaseTool):
 
     async def execute(self, tag: str = None) -> ToolResult:
         """List notes, optionally filtered by tag."""
+        logger.info('Entering ListNotesTool.execute')
         try:
             logger.info(f"Listing notes{' with tag: ' + tag if tag else ''}")
 
@@ -261,15 +276,18 @@ class DeleteNoteTool(BaseTool):
     """Tool for deleting a note."""
 
     def __init__(self, db: MongoDB, user_id: str):
+        logger.info('Entering DeleteNoteTool.__init__')
         self.db = db
         self.user_id = user_id
 
     @property
     def name(self) -> str:
+        logger.info('Entering DeleteNoteTool.name')
         return "delete_note"
 
     @property
     def description(self) -> str:
+        logger.info('Entering DeleteNoteTool.description')
         return (
             "Delete a note by its title. "
             "Use this when the user asks to remove or delete a specific note."
@@ -277,6 +295,7 @@ class DeleteNoteTool(BaseTool):
 
     @property
     def parameters(self) -> Dict[str, Any]:
+        logger.info('Entering DeleteNoteTool.parameters')
         return {
             "type": "object",
             "properties": {
@@ -290,6 +309,7 @@ class DeleteNoteTool(BaseTool):
 
     async def execute(self, title: str) -> ToolResult:
         """Delete a note by title."""
+        logger.info('Entering DeleteNoteTool.execute')
         try:
             logger.info(f"Deleting note: {title}")
 
