@@ -83,6 +83,7 @@ class WebhookServer:
 
             Telegram sends updates as JSON POST requests.
             """
+            print("Received webhook request")
             if not self._telegram_bot:
                 raise HTTPException(status_code=503, detail="Telegram bot not configured")
 
