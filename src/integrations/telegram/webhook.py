@@ -71,6 +71,11 @@ class WebhookServer:
             """Health check endpoint."""
             return {"status": "ok"}
 
+        @self.app.get("/healthz")
+        async def healthz():
+            """Health check endpoint for liveness."""
+            return {"status": "healthy", "timestamp": int(time.time() * 1000)}
+
         @self.app.post("/webhook/telegram")
         async def telegram_webhook(request: Request):
             """
