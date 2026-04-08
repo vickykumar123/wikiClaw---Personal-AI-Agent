@@ -22,6 +22,7 @@ class CreateNoteTool(BaseTool):
         embeddings_client: EmbeddingsClient,
         user_id: str
     ):
+        logger.info(f"Initializing CreateNoteTool for user_id: {user_id}")
         self.db = db
         self.embeddings = embeddings_client
         self.user_id = user_id
@@ -69,13 +70,12 @@ class CreateNoteTool(BaseTool):
     ) -> ToolResult:
         """Create a new note."""
         try:
-            logger.info(f"Creating note: {title}")
-
-            # Generate embedding for search
+            logger.info(f"CreateNoteTool called with title={title}, tags={tags}")
+            logger.debug("Generating embedding for note")
             embed_text = f"{title} {content}"
             embedding = await self.embeddings.get_embedding(embed_text)
-
-            # Create note
+            logger.debug("Embedding generated")
+            logger.debug("Saving note to DB")
             note = NoteSchema(
                 user_id=self.user_id,
                 title=title,
@@ -83,11 +83,10 @@ class CreateNoteTool(BaseTool):
                 tags=tags or [],
                 embedding=embedding
             )
-
-            # Save to MongoDB
             doc_id = await self.db.save_note(note)
-
+            logger.debug(f"Note saved with id {doc_id}")
             tags_str = f" with tags {tags}" if tags else ""
+            logger.info(f"Note '{title}' created{tags_str}.")
             return ToolResult(
                 success=True,
                 data=f"Note '{title}' created{tags_str}."
@@ -111,6 +110,7 @@ class SearchNotesTool(BaseTool):
         embeddings_client: EmbeddingsClient,
         user_id: str
     ):
+        logger.info(f"Initializing SearchNotesTool for user_id: {user_id}")
         self.db = db
         self.embeddings = embeddings_client
         self.user_id = user_id
@@ -143,18 +143,17 @@ class SearchNotesTool(BaseTool):
     async def execute(self, query: str) -> ToolResult:
         """Search notes by content."""
         try:
-            logger.info(f"Searching notes for: {query}")
-
-            # Generate embedding for query
+            logger.info(f"SearchNotesTool called with query={query}")
+            logger.debug("Generating embedding for query")
             embedding = await self.embeddings.get_embedding(query)
-
-            # Search notes
+            logger.debug("Embedding generated")
+            logger.debug("Searching notes in DB")
             results = await self.db.search_notes(
                 user_id=self.user_id,
                 embedding=embedding,
                 limit=5
             )
-
+            logger.debug(f"Found {len(results)} notes")
             if not results:
                 return ToolResult(
                     success=True,
@@ -167,6 +166,7 @@ class SearchNotesTool(BaseTool):
                 tags_str = f" [{', '.join(note.tags)}]" if note.tags else ""
                 notes_text.append(f"**{note.title}**{tags_str}: {note.content}")
 
+            logger.info("Search completed successfully")
             return ToolResult(
                 success=True,
                 data="\n\n".join(notes_text)
@@ -185,6 +185,7 @@ class ListNotesTool(BaseTool):
     """Tool for listing all notes."""
 
     def __init__(self, db: MongoDB, user_id: str):
+        logger.info(f"Initializing ListNotesTool for user_id: {user_id}")
         self.db = db
         self.user_id = user_id
 
@@ -217,15 +218,16 @@ class ListNotesTool(BaseTool):
         """List notes, optionally filtered by tag."""
         try:
             logger.info(f"Listing notes{' with tag: ' + tag if tag else ''}")
-
             if tag:
+                logger.debug("Fetching notes by tag from DB")
                 results = await self.db.get_notes_by_tag(
                     user_id=self.user_id,
                     tag=tag
                 )
             else:
+                logger.debug("Fetching all notes from DB")
                 results = await self.db.get_notes(user_id=self.user_id)
-
+            logger.debug(f"Retrieved {len(results)} notes")
             if not results:
                 if tag:
                     return ToolResult(
@@ -243,6 +245,7 @@ class ListNotesTool(BaseTool):
                 tags_str = f" [{', '.join(note.tags)}]" if note.tags else ""
                 notes_text.append(f"{i}. **{note.title}**{tags_str}")
 
+            logger.info("Listing notes completed successfully")
             return ToolResult(
                 success=True,
                 data=f"Your notes:\n" + "\n".join(notes_text)
@@ -261,6 +264,7 @@ class DeleteNoteTool(BaseTool):
     """Tool for deleting a note."""
 
     def __init__(self, db: MongoDB, user_id: str):
+        logger.info(f"Initializing DeleteNoteTool for user_id: {user_id}")
         self.db = db
         self.user_id = user_id
 
@@ -291,13 +295,13 @@ class DeleteNoteTool(BaseTool):
     async def execute(self, title: str) -> ToolResult:
         """Delete a note by title."""
         try:
-            logger.info(f"Deleting note: {title}")
-
+            logger.info(f"DeleteNoteTool called with title={title}")
+            logger.debug("Deleting note from DB")
             deleted = await self.db.delete_note(
                 user_id=self.user_id,
                 title=title
             )
-
+            logger.debug(f"Delete operation returned: {deleted}")
             if deleted:
                 return ToolResult(
                     success=True,
