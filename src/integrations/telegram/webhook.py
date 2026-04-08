@@ -83,10 +83,12 @@ class WebhookServer:
             try:
                 # Parse the update
                 data = await request.json()
+                logger.info(f"Received Telegram update payload: {data}")
                 update = Update.de_json(data, self._telegram_bot.application.bot)
 
                 # Process the update
                 await self._telegram_bot.application.process_update(update)
+                logger.info("Telegram update processed successfully")
 
                 return {"ok": True}
 
