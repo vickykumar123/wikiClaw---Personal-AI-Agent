@@ -22,6 +22,7 @@ class CreateNoteTool(BaseTool):
         embeddings_client: EmbeddingsClient,
         user_id: str
     ):
+        logger.info(f"Initializing CreateNoteTool for user_id: {user_id}")
         self.db = db
         self.embeddings = embeddings_client
         self.user_id = user_id
@@ -111,6 +112,7 @@ class SearchNotesTool(BaseTool):
         embeddings_client: EmbeddingsClient,
         user_id: str
     ):
+        logger.info(f"Initializing SearchNotesTool for user_id: {user_id}")
         self.db = db
         self.embeddings = embeddings_client
         self.user_id = user_id
@@ -185,6 +187,7 @@ class ListNotesTool(BaseTool):
     """Tool for listing all notes."""
 
     def __init__(self, db: MongoDB, user_id: str):
+        logger.info(f"Initializing ListNotesTool for user_id: {user_id}")
         self.db = db
         self.user_id = user_id
 
@@ -261,6 +264,7 @@ class DeleteNoteTool(BaseTool):
     """Tool for deleting a note."""
 
     def __init__(self, db: MongoDB, user_id: str):
+        logger.info(f"Initializing DeleteNoteTool for user_id: {user_id}")
         self.db = db
         self.user_id = user_id
 
