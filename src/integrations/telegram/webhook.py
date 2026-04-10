@@ -12,6 +12,9 @@ from telegram import Update
 import uvicorn
 from pyngrok import ngrok
 
+import time
+# Request tracking enabled
+REQUEST_COUNT = 0
 from constants import (
     DEFAULT_WEBHOOK_PORT,
     DEFAULT_WEBHOOK_PATH,
