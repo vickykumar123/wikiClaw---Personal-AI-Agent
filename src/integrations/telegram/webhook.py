@@ -8,9 +8,11 @@ from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, HTTPException
-from telegram import Update
-import uvicorn
-from pyngrok import ngrok
+import logging
+import asyncio
+from typing import Optional, Dict, Any
+from contextlib import asynccontextmanager
+import time
 
 from constants import (
     DEFAULT_WEBHOOK_PORT,
@@ -19,9 +21,11 @@ from constants import (
     ERROR_WEBHOOK_SETUP,
 )
 
+# Request tracking enabled
+REQUEST_COUNT = 0
+
 # Set up logging
 logger = logging.getLogger(__name__)
-
 
 class WebhookServer:
     """
@@ -52,6 +56,7 @@ class WebhookServer:
 
         # Platform handlers - will be registered by each platform
         self._telegram_bot = None
+        self.requests_handled = 0
 
         # Create FastAPI app
         self.app = FastAPI(
@@ -70,6 +75,16 @@ class WebhookServer:
             """Health check endpoint."""
             return {"status": "ok"}
 
+        @self.app.get("/healthz")
+        async def healthz_check():
+            """Extended health check endpoint."""
+            return {"status": "healthy", "uptime": "ok"}
+
+        @self.app.get("/metrics")
+        async def metrics():
+            """Metrics endpoint."""
+            return {"requests_handled": self.requests_handled}
+
         @self.app.post("/webhook/telegram")
         async def telegram_webhook(request: Request):
             """
@@ -87,6 +102,8 @@ class WebhookServer:
 
                 # Process the update
                 await self._telegram_bot.application.process_update(update)
+
+                self.requests_handled += 1
 
                 return {"ok": True}
 

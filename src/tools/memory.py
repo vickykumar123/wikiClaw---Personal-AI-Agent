@@ -37,6 +37,7 @@ class SearchMemoryTool(BaseTool):
         self.db = db
         self.embeddings = embeddings_client
         self.user_id = user_id
+        logger.info(f"SearchMemoryTool initialized for user_id: {self.user_id}")
 
     @property
     def name(self) -> str:
@@ -129,6 +130,7 @@ class SaveMemoryTool(BaseTool):
         self.db = db
         self.embeddings = embeddings_client
         self.user_id = user_id
+        logger.info(f"SaveMemoryTool initialized for user_id: {self.user_id}")
 
     @property
     def name(self) -> str:
