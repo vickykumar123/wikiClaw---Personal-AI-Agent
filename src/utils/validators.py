@@ -1,19 +1,13 @@
-"""Utility validation functions."""
-import urllib.parse
-import re
-
-
-def validate_url(url: str) -> bool:
+def validate_port(port):
     """
-    Validate that the given URL has a non-empty scheme and netloc.
-    """
-    parsed = urllib.parse.urlparse(url)
-    return bool(parsed.scheme) and bool(parsed.netloc)
+    Validate that the given port is an integer between 1 and 65535 inclusive.
 
+    Args:
+        port: The port number to validate.
 
-def validate_email(email: str) -> bool:
+    Returns:
+        bool: True if valid, False otherwise.
     """
-    Validate email address using a simple regex.
-    """
-    pattern = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-    return bool(pattern.match(email))
+    if isinstance(port, int) and 1 <= port <= 65535:
+        return True
+    return False
