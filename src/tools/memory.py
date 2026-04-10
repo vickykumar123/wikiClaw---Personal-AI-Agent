@@ -34,6 +34,7 @@ class SearchMemoryTool(BaseTool):
             embeddings_client: OpenAI embeddings client
             user_id: Current user's ID (for filtering)
         """
+        logger.info(f"Initializing SearchMemoryTool for user_id: {user_id}")
         self.db = db
         self.embeddings = embeddings_client
         self.user_id = user_id
@@ -126,6 +127,7 @@ class SaveMemoryTool(BaseTool):
         embeddings_client: EmbeddingsClient,
         user_id: str
     ):
+        logger.info(f"Initializing SaveMemoryTool for user_id: {user_id}")
         self.db = db
         self.embeddings = embeddings_client
         self.user_id = user_id
