@@ -1,17 +1,28 @@
-import re
-from urllib.parse import urlparse
+"""Utility validation functions.
 
+This module provides validation utilities such as IP address validation.
+"""
 
-def validate_url(url: str) -> bool:
-    """Return True if url is syntactically valid, else False."""
-    try:
-        result = urlparse(url)
-        return all([result.scheme, result.netloc])
-    except Exception:
+__all__ = ["validate_ip"]
+
+def validate_ip(ip: str) -> bool:
+    """Validate an IPv4 address.
+
+    Args:
+        ip: The IP address string to validate.
+
+    Returns:
+        True if `ip` is a valid IPv4 address, False otherwise.
+    """
+    if not isinstance(ip, str):
         return False
-
-
-def validate_email(email: str) -> bool:
-    """Return True if email matches a basic pattern, else False."""
-    pattern = r'^[^@\s]+@[^@\s]+\.[^@\s]+$'
-    return re.match(pattern, email) is not None
+    parts = ip.split('.')
+    if len(parts) != 4:
+        return False
+    for part in parts:
+        if not part.isdigit():
+            return False
+        num = int(part)
+        if num < 0 or num > 255:
+            return False
+    return True
