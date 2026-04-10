@@ -12,6 +12,9 @@ from telegram import Update
 import uvicorn
 from pyngrok import ngrok
 
+import time
+# Request tracking enabled
+REQUEST_COUNT = 0
 from constants import (
     DEFAULT_WEBHOOK_PORT,
     DEFAULT_WEBHOOK_PATH,
@@ -52,6 +55,7 @@ class WebhookServer:
 
         # Platform handlers - will be registered by each platform
         self._telegram_bot = None
+        self.requests_handled = 0
 
         # Create FastAPI app
         self.app = FastAPI(
@@ -70,6 +74,11 @@ class WebhookServer:
             """Health check endpoint."""
             return {"status": "ok"}
 
+        @self.app.get("/healthz")
+        async def healthz():
+            """Health check endpoint."""
+            return {"status": "healthy", "uptime": "ok"}
+
         @self.app.post("/webhook/telegram")
         async def telegram_webhook(request: Request):
             """
@@ -87,6 +96,7 @@ class WebhookServer:
 
                 # Process the update
                 await self._telegram_bot.application.process_update(update)
+                self.requests_handled += 1
 
                 return {"ok": True}
 
@@ -98,7 +108,13 @@ class WebhookServer:
         @self.app.post("/webhook/whatsapp")
         async def whatsapp_webhook(request: Request):
             """Handle incoming WhatsApp webhook (future)."""
+            self.requests_handled += 1
             return {"ok": True, "message": "WhatsApp webhook not implemented yet"}
+
+        @self.app.get("/metrics")
+        async def metrics():
+            """Metrics endpoint."""
+            return {"requests_handled": self.requests_handled}
 
     @asynccontextmanager
     async def _lifespan(self, app: FastAPI):
