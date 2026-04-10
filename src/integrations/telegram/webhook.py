@@ -52,6 +52,7 @@ class WebhookServer:
 
         # Platform handlers - will be registered by each platform
         self._telegram_bot = None
+        self.requests_handled = 0
 
         # Create FastAPI app
         self.app = FastAPI(
@@ -75,6 +76,11 @@ class WebhookServer:
             """Extended health check endpoint."""
             return {"status": "healthy", "uptime": "ok"}
 
+        @self.app.get("/metrics")
+        async def metrics():
+            """Metrics endpoint."""
+            return {"requests_handled": self.requests_handled}
+
         @self.app.post("/webhook/telegram")
         async def telegram_webhook(request: Request):
             """
@@ -92,6 +98,8 @@ class WebhookServer:
 
                 # Process the update
                 await self._telegram_bot.application.process_update(update)
+
+                self.requests_handled += 1
 
                 return {"ok": True}
 
