@@ -8,9 +8,11 @@ from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, HTTPException
-from telegram import Update
-import uvicorn
-from pyngrok import ngrok
+import logging
+import asyncio
+from typing import Optional, Dict, Any
+from contextlib import asynccontextmanager
+import time
 
 from constants import (
     DEFAULT_WEBHOOK_PORT,
@@ -19,9 +21,11 @@ from constants import (
     ERROR_WEBHOOK_SETUP,
 )
 
+# Request tracking enabled
+REQUEST_COUNT = 0
+
 # Set up logging
 logger = logging.getLogger(__name__)
-
 
 class WebhookServer:
     """
