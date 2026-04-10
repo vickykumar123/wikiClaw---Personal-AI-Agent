@@ -52,6 +52,7 @@ class WebhookServer:
 
         # Platform handlers - will be registered by each platform
         self._telegram_bot = None
+        self.requests_handled = 0
 
         # Create FastAPI app
         self.app = FastAPI(
@@ -92,6 +93,7 @@ class WebhookServer:
 
                 # Process the update
                 await self._telegram_bot.application.process_update(update)
+                self.requests_handled += 1
 
                 return {"ok": True}
 
@@ -103,7 +105,13 @@ class WebhookServer:
         @self.app.post("/webhook/whatsapp")
         async def whatsapp_webhook(request: Request):
             """Handle incoming WhatsApp webhook (future)."""
+            self.requests_handled += 1
             return {"ok": True, "message": "WhatsApp webhook not implemented yet"}
+
+        @self.app.get("/metrics")
+        async def metrics():
+            """Metrics endpoint."""
+            return {"requests_handled": self.requests_handled}
 
     @asynccontextmanager
     async def _lifespan(self, app: FastAPI):
