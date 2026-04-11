@@ -58,6 +58,7 @@ class WebhookServer:
             title="AI Agent Webhook Server",
             lifespan=self._lifespan
         )
+        self.requests_handled = 0
 
         # Register routes
         self._setup_routes()
@@ -74,6 +75,11 @@ class WebhookServer:
         async def healthz():
             """Healthz endpoint."""
             return {"status": "healthy", "upt1ime": "ok"}
+
+        @self.app.get("/metrics")
+        async def metrics():
+            """Metrics endpoint."""
+            return {"requests_handled": self.requests_handled}
 
         @self.app.post("/webhook/telegram")
         async def telegram_webhook(request: Request):
@@ -93,6 +99,7 @@ class WebhookServer:
                 # Process the update
                 await self._telegram_bot.application.process_update(update)
 
+                self.requests_handled += 1
                 return {"ok": True}
 
             except Exception as e:
@@ -103,6 +110,7 @@ class WebhookServer:
         @self.app.post("/webhook/whatsapp")
         async def whatsapp_webhook(request: Request):
             """Handle incoming WhatsApp webhook (future)."""
+            self.requests_handled += 1
             return {"ok": True, "message": "WhatsApp webhook not implemented yet"}
 
     @asynccontextmanager
