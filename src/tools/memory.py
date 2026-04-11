@@ -34,6 +34,7 @@ class SearchMemoryTool(BaseTool):
             embeddings_client: OpenAI embeddings client
             user_id: Current user's ID (for filtering)
         """
+        logger.info(f"Initializing SearchMemoryTool for user_id: {user_id}")
         self.db = db
         self.embeddings = embeddings_client
         self.user_id = user_id
@@ -75,6 +76,7 @@ class SearchMemoryTool(BaseTool):
         Returns:
             ToolResult with matching context entries
         """
+        logger.info(f"Executing SearchMemoryTool.execute with query: {query}, limit: {limit}")
         try:
             logger.info(f"Searching memory for: {query}")
 
@@ -126,6 +128,7 @@ class SaveMemoryTool(BaseTool):
         embeddings_client: EmbeddingsClient,
         user_id: str
     ):
+        logger.info(f"Initializing SaveMemoryTool for user_id: {user_id}")
         self.db = db
         self.embeddings = embeddings_client
         self.user_id = user_id
@@ -174,6 +177,7 @@ class SaveMemoryTool(BaseTool):
         Returns:
             ToolResult indicating success/failure
         """
+        logger.info(f"Executing SaveMemoryTool.execute with memory_type: {memory_type}, content: {content[:50]}...")
         # Handle LLM sending 'type' instead of 'memory_type'
         if memory_type is None:
             memory_type = kwargs.get('type', 'fact')
