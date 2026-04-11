@@ -1,49 +1,20 @@
-"""Utility validation functions."""
+def validate_ip(ip: str) -> bool:
+    """Return True if `ip` is a valid IPv4 address.
 
-import re
-from urllib.parse import urlparse
-
-def validate_url(url: str) -> bool:
+    The address must consist of four decimal octets separated by dots.
+    Each octet must be in the range 0-255, contain only digits, and must not
+    have leading zeros unless the octet is exactly "0".
     """
-    Validate that the given string is a syntactically valid URL.
-
-    The function parses the URL using :func:`urllib.parse.urlparse` and
-    checks that both the scheme (e.g., ``http`` or ``https``) and the network
-    location part (netloc) are present.
-
-    Parameters
-    ----------
-    url: str
-        The URL string to validate.
-
-    Returns
-    -------
-    bool
-        ``True`` if the URL has a non‑empty scheme and netloc, otherwise ``False``.
-    """
-    try:
-        result = urlparse(url)
-        return all([result.scheme, result.netloc])
-    except Exception:
+    parts = ip.split('.')
+    if len(parts) != 4:
         return False
-
-def validate_email(email: str) -> bool:
-    """
-    Validate that the given string looks like an email address.
-
-    This uses a simple regular expression that checks for the presence of a
-    single ``@`` symbol and at least one ``.`` in the domain part. It is not a
-    full RFC‑5322 validation but works for most common cases.
-
-    Parameters
-    ----------
-    email: str
-        The email address to validate.
-
-    Returns
-    -------
-    bool
-        ``True`` if the string matches the basic email pattern, otherwise ``False``.
-    """
-    pattern = r'^[^@\s]+@[^@\s]+\.[^@\s]+$'
-    return re.match(pattern, email) is not None
+    for part in parts:
+        if not part.isdigit():
+            return False
+        # Disallow leading zeros (e.g., "01") unless the part is "0"
+        if len(part) > 1 and part[0] == '0':
+            return False
+        num = int(part)
+        if num < 0 or num > 255:
+            return False
+    return True
