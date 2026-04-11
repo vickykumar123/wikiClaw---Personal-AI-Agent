@@ -1,28 +1,29 @@
 """Utility validation functions."""
 
-import re
-from urllib.parse import urlparse
-__all__ = ["validate_url", "validate_email", "validate_port"]
+__all__ = ["validate_ip"]
 
-def validate_url(url: str) -> bool:
-    """Return True if *url* parses to a URL with a non‑empty scheme and netloc."""
-    if not isinstance(url, str):
+def validate_ip(ip: str) -> bool:
+    """Validate an IPv4 address.
+
+    Args:
+        ip: The IP address string to validate.
+
+    Returns:
+        True if *ip* is a valid IPv4 address, False otherwise.
+
+    An IPv4 address consists of four decimal numbers (0-255) separated by
+    periods. Leading zeros are not permitted unless the octet is exactly
+    ``0``. Non‑numeric characters cause validation to fail.
+    """
+    parts = ip.split('.')
+    if len(parts) != 4:
         return False
-    parsed = urlparse(url)
-    return bool(parsed.scheme) and bool(parsed.netloc)
-
-def validate_email(email: str) -> bool:
-    """Return True if *email* matches a basic email pattern."""
-    if not isinstance(email, str):
-        return False
-    # Simple email regex: one or more word chars, dots, plus, hyphen before @,
-    # then domain part with at least one dot.
-    pattern = r"^[\w\.\+\-]+@[\w\.\-]+\.[a-zA-Z]{2,}$"
-    return re.fullmatch(pattern, email) is not None
-
-def validate_port(port: int) -> bool:
-    """Return True if *port* is an integer between 1 and 65535 inclusive."""
-    if not isinstance(port, int):
-        return False
-    return 1 <= port <= 65535
-
+    for part in parts:
+        if not part.isdigit():
+            return False
+        if len(part) > 1 and part[0] == '0':
+            return False
+        num = int(part)
+        if not 0 <= num <= 255:
+            return False
+    return True
