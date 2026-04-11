@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request, HTTPException
 from telegram import Update
 import uvicorn
 from pyngrok import ngrok
+import time
 
 from constants import (
     DEFAULT_WEBHOOK_PORT,
@@ -18,6 +19,9 @@ from constants import (
     MSG_WEBHOOK_SET,
     ERROR_WEBHOOK_SETUP,
 )
+
+# Request tracking enabled
+REQUEST_COUNT = 0
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -59,6 +63,11 @@ class WebhookServer:
             lifespan=self._lifespan
         )
 
+        # Initialize request counter
+        self.requests_handled = 0
+        # Setup middleware
+        self._setup_middleware()
+
         # Register routes
         self._setup_routes()
 
@@ -69,6 +78,11 @@ class WebhookServer:
         async def health_check():
             """Health check endpoint."""
             return {"status": "ok"}
+
+        @self.app.get("/healthz")
+        async def healthz_check():
+            """Healthz check endpoint."""
+            return {"status": "healthy", "uptime": "ok"}
 
         @self.app.post("/webhook/telegram")
         async def telegram_webhook(request: Request):
@@ -95,10 +109,23 @@ class WebhookServer:
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Placeholder for future platforms
+        @self.app.get("/metrics")
+        async def metrics():
+            """Metrics endpoint."""
+            return {"requests_handled": self.requests_handled}
+
         @self.app.post("/webhook/whatsapp")
         async def whatsapp_webhook(request: Request):
             """Handle incoming WhatsApp webhook (future)."""
             return {"ok": True, "message": "WhatsApp webhook not implemented yet"}
+
+    def _setup_middleware(self) -> None:
+        """Register FastAPI middleware to count requests."""
+        @self.app.middleware("http")
+        async def count_requests(request: Request, call_next):
+            self.requests_handled += 1
+            response = await call_next(request)
+            return response
 
     @asynccontextmanager
     async def _lifespan(self, app: FastAPI):
