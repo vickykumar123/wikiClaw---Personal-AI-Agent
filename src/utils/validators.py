@@ -2,8 +2,7 @@
 
 import re
 from urllib.parse import urlparse
-
-__all__ = ["validate_url", "validate_email"]
+__all__ = ["validate_url", "validate_email", "validate_port"]
 
 def validate_url(url: str) -> bool:
     """Return True if *url* parses to a URL with a non‑empty scheme and netloc."""
@@ -20,3 +19,10 @@ def validate_email(email: str) -> bool:
     # then domain part with at least one dot.
     pattern = r"^[\w\.\+\-]+@[\w\.\-]+\.[a-zA-Z]{2,}$"
     return re.fullmatch(pattern, email) is not None
+
+def validate_port(port: int) -> bool:
+    """Return True if *port* is an integer between 1 and 65535 inclusive."""
+    if not isinstance(port, int):
+        return False
+    return 1 <= port <= 65535
+
