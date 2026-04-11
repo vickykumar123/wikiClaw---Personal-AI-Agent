@@ -59,6 +59,11 @@ class WebhookServer:
             lifespan=self._lifespan
         )
 
+        # Initialize request counter
+        self.requests_handled = 0
+        # Setup middleware
+        self._setup_middleware()
+
         # Register routes
         self._setup_routes()
 
@@ -100,10 +105,23 @@ class WebhookServer:
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Placeholder for future platforms
+        @self.app.get("/metrics")
+        async def metrics():
+            """Metrics endpoint."""
+            return {"requests_handled": self.requests_handled}
+
         @self.app.post("/webhook/whatsapp")
         async def whatsapp_webhook(request: Request):
             """Handle incoming WhatsApp webhook (future)."""
             return {"ok": True, "message": "WhatsApp webhook not implemented yet"}
+
+    def _setup_middleware(self) -> None:
+        """Register FastAPI middleware to count requests."""
+        @self.app.middleware("http")
+        async def count_requests(request: Request, call_next):
+            self.requests_handled += 1
+            response = await call_next(request)
+            return response
 
     @asynccontextmanager
     async def _lifespan(self, app: FastAPI):
