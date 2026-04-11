@@ -53,11 +53,20 @@ class WebhookServer:
         # Platform handlers - will be registered by each platform
         self._telegram_bot = None
 
+        # Initialize request counter
+        self.requests_handled = 0
+
         # Create FastAPI app
         self.app = FastAPI(
             title="AI Agent Webhook Server",
             lifespan=self._lifespan
         )
+
+        @self.app.middleware("http")
+        async def count_requests(request: Request, call_next):
+            self.requests_handled += 1
+            response = await call_next(request)
+            return response
 
         # Register routes
         self._setup_routes()
@@ -74,6 +83,11 @@ class WebhookServer:
         async def healthz():
             """Healthz endpoint."""
             return {"status": "healthy", "uptime": "ok"}
+
+        @self.app.get("/metrics")
+        async def metrics():
+            """Metrics endpoint."""
+            return {"requests_handled": self.requests_handled}
 
         @self.app.post("/webhook/telegram")
         async def telegram_webhook(request: Request):
