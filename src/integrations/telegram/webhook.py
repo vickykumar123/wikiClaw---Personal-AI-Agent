@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from telegram import Update
 import uvicorn
+import time
 from pyngrok import ngrok
 
 from constants import (
@@ -72,6 +73,16 @@ class WebhookServer:
             logger.info("Health check endpoint called")
             return {"status": "ok"}
 
+        @self.app.get("/healthz")
+        async def healthz():
+            """Health check endpoint for liveness."""
+            return {"status": "healthy", "timestamp": int(time.time() * 1000)}
+
+        @self.app.get("/version")
+        async def version():
+            """Version endpoint."""
+            return {"version": "1.0.0", "name": "WikiClaw"}
+
         @self.app.post("/webhook/telegram")
         async def telegram_webhook(request: Request):
             """
@@ -79,6 +90,7 @@ class WebhookServer:
 
             Telegram sends updates as JSON POST requests.
             """
+            print('Received webhook request')
             if not self._telegram_bot:
                 raise HTTPException(status_code=503, detail="Telegram bot not configured")
 
