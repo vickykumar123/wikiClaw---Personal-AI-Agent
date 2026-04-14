@@ -4,6 +4,7 @@
 
 import logging
 import asyncio
+import json
 from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
 
@@ -105,6 +106,7 @@ class WebhookServer:
         @self.app.post("/webhook/whatsapp")
         async def whatsapp_webhook(request: Request):
             """Handle incoming WhatsApp webhook (future)."""
+            logger.info("Received WhatsApp webhook request")
             return {"ok": True, "message": "WhatsApp webhook not implemented yet"}
 
     @asynccontextmanager
@@ -117,9 +119,12 @@ class WebhookServer:
         """
         # Startup
         logger.info(f"Starting webhook server on port {self.port}")
+        logger.info("Webhook server startup sequence initiated")
         yield
         # Shutdown
+        logger.info("Webhook server shutdown sequence initiated")
         await self._stop_ngrok()
+        logger.info("Webhook server shutdown complete")
 
     def register_telegram_bot(self, bot) -> None:
         """
