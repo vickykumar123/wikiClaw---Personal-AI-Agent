@@ -69,7 +69,7 @@ class WebhookServer:
         @self.app.get("/health")
         async def health_check():
             """Health check endpoint."""
-            logger.info("Health check endpoint called")
+            logger.info('Health check requested')
             return {"status": "ok"}
 
         @self.app.post("/webhook/telegram")
@@ -79,27 +79,27 @@ class WebhookServer:
 
             Telegram sends updates as JSON POST requests.
             """
+            logger.info(f"Received Telegram webhook request from {request.client.host} at {request.headers.get('date', 'unknown')}")
             if not self._telegram_bot:
+                logger.warning("Telegram bot not configured")
                 raise HTTPException(status_code=503, detail="Telegram bot not configured")
 
             try:
                 # Parse the update
                 data = await request.json()
-                # Log receipt with truncated pretty JSON
-                try:
-                    pretty = json.dumps(data, indent=2)
-                except Exception:
-                    pretty = str(data)
-                logger.info(f"Received Telegram webhook: {pretty[:500]}")
+                logger.debug(f"Telegram webhook payload: {str(data)[:200]}")
                 update = Update.de_json(data, self._telegram_bot.application.bot)
+                logger.debug(f"Update received: id={update.update_id}, type={type(update)}")
+                logger.info(f"Processing Telegram update id={update.update_id}")
 
                 # Process the update
                 await self._telegram_bot.application.process_update(update)
+                logger.info('Telegram update processed successfully', extra={'update_id': update.update_id})
 
                 return {"ok": True}
 
             except Exception as e:
-                logger.error(f"Error processing Telegram webhook: {e}")
+                logger.exception(f"Error processing Telegram webhook from {request.client.host}: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Placeholder for future platforms
@@ -146,17 +146,23 @@ class WebhookServer:
         if self.ngrok_auth_token:
             ngrok.set_auth_token(self.ngrok_auth_token)
 
-        logger.info(f"Starting ngrok tunnel on port {self.port}")
-        # Start tunnel
-        self.ngrok_tunnel = ngrok.connect(self.port, "http")
-        self.webhook_url = self.ngrok_tunnel.public_url
+        try:
+            logger.info(f"Starting ngrok tunnel on port {self.port}")
+            logger.debug(f"Attempting to start ngrok tunnel on port {self.port}")
+            # Start tunnel
+            self.ngrok_tunnel = ngrok.connect(self.port, "http")
+            self.webhook_url = self.ngrok_tunnel.public_url
+            logger.debug(f"ngrok public URL obtained: {self.webhook_url}")
 
-        # Ensure HTTPS
-        if self.webhook_url.startswith("http://"):
-            self.webhook_url = self.webhook_url.replace("http://", "https://")
+            # Ensure HTTPS
+            if self.webhook_url.startswith("http://"):
+                self.webhook_url = self.webhook_url.replace("http://", "https://")
 
-        logger.info(f"ngrok tunnel started: {self.webhook_url}")
-        return self.webhook_url
+            logger.info(f"ngrok tunnel started: {self.webhook_url}")
+            return self.webhook_url
+        except Exception as e:
+            logger.exception(f"Failed to start ngrok tunnel: {e}")
+            raise
 
     async def _stop_ngrok(self) -> None:
         """Stop ngrok tunnel."""
@@ -178,15 +184,19 @@ class WebhookServer:
         try:
             webhook_full_url = f"{self.webhook_url}/webhook/telegram"
 
+            logger.info(f"Attempting to set Telegram webhook: {webhook_full_url}")
+
+            logger.debug(f"Setting Telegram webhook to URL: {webhook_full_url}")
             await self._telegram_bot.application.bot.set_webhook(
                 url=webhook_full_url
             )
+            logger.debug(f"Telegram webhook set successfully: {webhook_full_url}")
 
             logger.info(f"{MSG_WEBHOOK_SET}: {webhook_full_url}")
             return True
 
         except Exception as e:
-            logger.error(f"{ERROR_WEBHOOK_SETUP}: {e}")
+            logger.exception(f"{ERROR_WEBHOOK_SETUP}: {e}")
             return False
 
     async def remove_telegram_webhook(self) -> bool:
@@ -198,11 +208,14 @@ class WebhookServer:
         """
         try:
             if self._telegram_bot:
+                logger.info("Removing Telegram webhook")
+                logger.debug("Attempting to delete Telegram webhook")
                 await self._telegram_bot.application.bot.delete_webhook()
+                logger.debug("Telegram webhook successfully deleted")
                 logger.info("Telegram webhook removed")
             return True
         except Exception as e:
-            logger.error(f"Failed to remove webhook: {e}")
+            logger.exception(f"Failed to remove webhook: {e}")
             return False
 
     def run(self) -> None:
