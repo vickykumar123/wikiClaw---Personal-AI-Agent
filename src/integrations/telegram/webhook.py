@@ -7,7 +7,7 @@ import asyncio
 from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Response
 from telegram import Update
 import uvicorn
 from pyngrok import ngrok
@@ -58,9 +58,16 @@ class WebhookServer:
             title="AI Agent Webhook Server",
             lifespan=self._lifespan
         )
+        self.app.middleware("http")(self._log_requests)
 
         # Register routes
         self._setup_routes()
+
+    async def _log_requests(self, request: Request, call_next):
+        logger.info(f"Incoming request: {request.method} {request.url.path}")
+        response = await call_next(request)
+        logger.info(f"Response status: {response.status_code}")
+        return response
 
     def _setup_routes(self) -> None:
         """Set up webhook endpoints for each platform."""
