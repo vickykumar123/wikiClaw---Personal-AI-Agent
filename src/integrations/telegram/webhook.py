@@ -12,6 +12,7 @@ from fastapi import FastAPI, Request, HTTPException
 from telegram import Update
 import uvicorn
 from pyngrok import ngrok
+import time
 
 from constants import (
     DEFAULT_WEBHOOK_PORT,
@@ -20,7 +21,10 @@ from constants import (
     ERROR_WEBHOOK_SETUP,
 )
 
+REQUEST_COUNT = 0
+
 # Set up logging
+# Request tracking enabled
 logger = logging.getLogger(__name__)
 
 
