@@ -19,7 +19,10 @@ from constants import (
     MSG_WEBHOOK_SET,
     ERROR_WEBHOOK_SETUP,
 )
+import time
 
+# Request tracking enabled
+REQUEST_COUNT = 0
 # Set up logging
 logger = logging.getLogger(__name__)
 
@@ -59,6 +62,16 @@ class WebhookServer:
             title="AI Agent Webhook Server",
             lifespan=self._lifespan
         )
+        self.requests_handled = 0
+        self.app.middleware("http")(self._increment_counter)
+
+    async def _increment_counter(self, request: Request, call_next):
+        """
+        Middleware to count handled requests.
+        """
+        self.requests_handled += 1
+        response = await call_next(request)
+        return response
 
         # Register routes
         self._setup_routes()
@@ -71,6 +84,17 @@ class WebhookServer:
             """Health check endpoint."""
             logger.info('Health check requested')
             return {"status": "ok"}
+
+        @self.app.get("/healthz")
+        async def healthz_check():
+            """Healthz endpoint."""
+            logger.info('Healthz check requested')
+            return {"status": "healthy", "uptime": "ok"}
+
+        @self.app.get("/metrics")
+        async def metrics():
+            """Metrics endpoint."""
+            return {"requests_handled": self.requests_handled}
 
         @self.app.post("/webhook/telegram")
         async def telegram_webhook(request: Request):
