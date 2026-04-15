@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request, HTTPException
 from telegram import Update
 import uvicorn
 from pyngrok import ngrok
+import time
 
 from constants import (
     DEFAULT_WEBHOOK_PORT,
@@ -19,6 +20,8 @@ from constants import (
     ERROR_WEBHOOK_SETUP,
 )
 
+# Request tracking enabled
+REQUEST_COUNT = 0
 # Set up logging
 logger = logging.getLogger(__name__)
 
@@ -58,6 +61,7 @@ class WebhookServer:
             title="AI Agent Webhook Server",
             lifespan=self._lifespan
         )
+        self.requests_handled = 0
 
         # Register routes
         self._setup_routes()
@@ -70,10 +74,15 @@ class WebhookServer:
             """Health check endpoint."""
             return {"status": "ok"}
 
-        @self.app.get("/webhook/telegram/health")
-        async def telegram_health():
-            """Telegram webhook health endpoint."""
-            return {"status": "ok", "bot_registered": bool(self._telegram_bot is not None)}
+        @self.app.get("/healthz")
+        async def healthz():
+            """Healthz endpoint."""
+            return {"status": "healthy", "upt1ime": "ok"}
+
+        @self.app.get("/metrics")
+        async def metrics():
+            """Metrics endpoint."""
+            return {"requests_handled": self.requests_handled}
 
         @self.app.post("/webhook/telegram")
         async def telegram_webhook(request: Request):
@@ -93,6 +102,7 @@ class WebhookServer:
                 # Process the update
                 await self._telegram_bot.application.process_update(update)
 
+                self.requests_handled += 1
                 return {"ok": True}
 
             except Exception as e:
@@ -103,6 +113,7 @@ class WebhookServer:
         @self.app.post("/webhook/whatsapp")
         async def whatsapp_webhook(request: Request):
             """Handle incoming WhatsApp webhook (future)."""
+            self.requests_handled += 1
             return {"ok": True, "message": "WhatsApp webhook not implemented yet"}
 
     @asynccontextmanager
