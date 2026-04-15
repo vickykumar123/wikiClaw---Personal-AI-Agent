@@ -19,7 +19,10 @@ from constants import (
     MSG_WEBHOOK_SET,
     ERROR_WEBHOOK_SETUP,
 )
+import time
 
+# Request tracking enabled
+REQUEST_COUNT = 0
 # Set up logging
 logger = logging.getLogger(__name__)
 
