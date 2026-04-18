@@ -1,3 +1,4 @@
+# WikiClaw Personal AI Agent - Main Entry Point
 # ============================================
 # MAIN - Application entry point
 # ============================================
