@@ -48,6 +48,7 @@ class WebhookServer:
         """
         self.port = port
         self.ngrok_auth_token = ngrok_auth_token
+        logger.info(f"Initializing WebhookServer on port {self.port} with ngrok token {'provided' if self.ngrok_auth_token else 'none'}")
         self.ngrok_tunnel = None
         self.webhook_url: Optional[str] = None
 
@@ -149,6 +150,7 @@ class WebhookServer:
         try:
             logger.info(f"Starting ngrok tunnel on port {self.port}")
             logger.debug(f"Attempting to start ngrok tunnel on port {self.port}")
+            logger.debug(f"Starting ngrok tunnel on port {self.port}")
             # Start tunnel
             self.ngrok_tunnel = ngrok.connect(self.port, "http")
             self.webhook_url = self.ngrok_tunnel.public_url
