@@ -20,9 +20,13 @@ from constants import (
     ERROR_WEBHOOK_SETUP,
 )
 
+import time
+
 # Set up logging
 logger = logging.getLogger(__name__)
-request_counter = 0
+REQUEST_COUNT = 0
+# Request tracking enabled
+REQUEST_COUNT = 0
 
 
 class WebhookServer:
