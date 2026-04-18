@@ -72,6 +72,16 @@ class WebhookServer:
             logger.info('Health check requested')
             return {"status": "ok"}
 
+        @self.app.get("/status")
+        async def status():
+            """Status endpoint."""
+            logger.info('Status endpoint requested')
+            return {
+                "status": "ok",
+                "port": self.port,
+                "webhook_url": self.webhook_url
+            }
+
         @self.app.get("/healthz")
         async def healthz():
             """Healthz endpoint."""
