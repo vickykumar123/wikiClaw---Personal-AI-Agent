@@ -20,8 +20,13 @@ from constants import (
     ERROR_WEBHOOK_SETUP,
 )
 
+import time
+
 # Set up logging
 logger = logging.getLogger(__name__)
+REQUEST_COUNT = 0
+# Request tracking enabled
+REQUEST_COUNT = 0
 
 
 class WebhookServer:
@@ -70,7 +75,15 @@ class WebhookServer:
         async def health_check():
             """Health check endpoint."""
             logger.info('Health check requested')
+            global request_counter; request_counter += 1
             return {"status": "ok"}
+
+
+        @self.app.get("/healthz")
+        async def healthz():
+            """Healthz endpoint."""
+            logger.info('Healthz endpoint called')
+            return {"status": "healthy", "uptime": "ok"}
 
         @self.app.post("/webhook/telegram")
         async def telegram_webhook(request: Request):
@@ -96,6 +109,7 @@ class WebhookServer:
                 await self._telegram_bot.application.process_update(update)
                 logger.info('Telegram update processed successfully', extra={'update_id': update.update_id})
 
+                global request_counter; request_counter += 1
                 return {"ok": True}
 
             except Exception as e:
@@ -103,6 +117,10 @@ class WebhookServer:
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Placeholder for future platforms
+        @self.app.get("/metrics")
+        async def metrics():
+            """Metrics endpoint."""
+            return {"requests_handled": request_counter}
         @self.app.post("/webhook/whatsapp")
         async def whatsapp_webhook(request: Request):
             """Handle incoming WhatsApp webhook (future)."""
