@@ -12,6 +12,7 @@ from fastapi import FastAPI, Request, HTTPException
 from telegram import Update
 import uvicorn
 from pyngrok import ngrok
+import time
 
 from constants import (
     DEFAULT_WEBHOOK_PORT,
@@ -19,6 +20,9 @@ from constants import (
     MSG_WEBHOOK_SET,
     ERROR_WEBHOOK_SETUP,
 )
+
+# Request tracking enabled
+REQUEST_COUNT = 0
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -71,6 +75,12 @@ class WebhookServer:
             """Health check endpoint."""
             logger.info('Health check requested')
             return {"status": "ok"}
+
+        @self.app.get("/healthz")
+        async def healthz_check():
+            """Healthz endpoint."""
+            logger.info('Healthz check requested')
+            return {"status": "healthy", "uptime": "ok"}
 
         @self.app.post("/webhook/telegram")
         async def telegram_webhook(request: Request):
