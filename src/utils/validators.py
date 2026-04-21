@@ -1,2 +1,1 @@
-def validate_email(email: str) -> bool:
-    return '@' in email and '.' in email
+'''\nUtility validation functions.\n'''\n\ndef validate_port(port: int) -> bool:\n    '''\n    Validate that ``port`` is an integer between 1 and 65535 inclusive.\n\n    Args:\n        port (int): The port number to validate.\n\n    Returns:\n        bool: True if ``port`` is a valid port number, False otherwise.\n    '''\n    return isinstance(port, int) and 1 <= port <= 65535\n
