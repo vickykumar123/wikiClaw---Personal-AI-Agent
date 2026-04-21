@@ -1,33 +1,25 @@
-"""Utility validators for URL and email."""
+# src/utils/validators.py
+"""Utility validation functions for URLs and email addresses."""
 
 import re
-from urllib.parse import urlparse
-
 
 def validate_url(url: str) -> bool:
-    """
-    Validate a URL string.
+    """Return True if *url* matches a simple HTTP/HTTPS URL pattern.
 
-    Returns True if the URL has a scheme and netloc (e.g., ``http://example.com``).
+    The pattern checks for an optional scheme (http or https), a domain name
+    consisting of alphanumeric characters, hyphens and dots, and an optional
+    path. It is not exhaustive but suitable for basic validation.
     """
-    try:
-        parsed = urlparse(url)
-        return bool(parsed.scheme) and bool(parsed.netloc)
-    except Exception:
-        return False
+    pattern = r'^(https?://)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(/.*)?$'
+    return re.match(pattern, url) is not None
 
 
 def validate_email(email: str) -> bool:
+    """Return True if *email* matches a basic email address pattern.
+
+    The pattern checks for a local part with word characters, dots or hyphens,
+    an @ symbol, and a domain part with similar rules followed by a top‑level
+    domain.
     """
-    Validate an email address using a regular expression.
-
-    Returns True if the email matches a basic pattern.
-    """
-    email_pattern = re.compile(
-        r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+"
-        r"@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$"
-    )
-    return bool(email_pattern.fullmatch(email))
-
-
-__all__ = ["validate_url", "validate_email"]
+    pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+    return re.match(pattern, email) is not None

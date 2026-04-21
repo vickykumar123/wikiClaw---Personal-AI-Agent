@@ -1,52 +1,30 @@
-# src/utils/formatters.py
+"""Utility formatters module."""
 
-"""Utility formatters.
-
-This module provides helper functions for formatting timestamps and truncating text.
-"""
-
-import datetime
+from datetime import datetime
 
 
-def format_timestamp(dt: datetime.datetime) -> str:
+def format_timestamp(dt: datetime) -> str:
+    """Format a datetime object as 'YYYY-MM-DD HH:MM:SS'.
+
+    Args:
+        dt (datetime): The datetime to format.
+
+    Returns:
+        str: Formatted timestamp string.
     """
-    Convert a datetime object to an ISO‑8601 formatted string.
-
-    Parameters
-    ----------
-    dt : datetime.datetime
-        The datetime to format.
-
-    Returns
-    -------
-    str
-        ISO‑8601 formatted timestamp.
-    """
-    if dt.tzinfo is None:
-        # Assume naive datetime is in UTC
-        dt = dt.replace(tzinfo=datetime.timezone.utc)
-    return dt.isoformat()
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def truncate_text(text: str, max_length: int = 100) -> str:
-    """
-    Truncate a string to a maximum length, adding an ellipsis if it was truncated.
+    """Truncate a string to a maximum length, adding ellipsis if truncated.
 
-    Parameters
-    ----------
-    text : str
-        The text to truncate.
-    max_length : int, optional
-        Maximum allowed length of the returned string (including ellipsis). Default is 100.
+    Args:
+        text (str): The input string.
+        max_length (int, optional): Maximum allowed length. Defaults to 100.
 
-    Returns
-    -------
-    str
-        The possibly truncated string.
+    Returns:
+        str: Possibly truncated string.
     """
     if len(text) <= max_length:
         return text
-    if max_length <= 3:
-        # Not enough room for ellipsis, just cut
-        return text[:max_length]
-    return text[: max_length - 3] + "..."
+    return text[:max_length].rstrip() + "..."
