@@ -1,22 +1,29 @@
-"""Utility validation functions."""
+"""Utility validation functions.
+
+This module provides helper functions for validating common data formats.
+"""
+
+__all__ = ["validate_ip"]
 
 
-def validate_port(port):
-    """Validate that `port` is an integer between 1 and 65535 inclusive.
+def validate_ip(ip: str) -> bool:
+    """Validate an IPv4 address.
 
-    Parameters
-    ----------
-    port : Any
-        The value to validate as a port number.
+    Args:
+        ip: A string representing the IPv4 address.
 
-    Returns
-    -------
-    bool
-        ``True`` if *port* is a valid integer port number, ``False`` otherwise.
+    Returns:
+        True if `ip` is a valid IPv4 address (four octets, each 0-255), otherwise False.
     """
-    # bool is a subclass of int, but should not be considered a valid port
-    if isinstance(port, bool):
+    if not isinstance(ip, str):
         return False
-    if isinstance(port, int) and 1 <= port <= 65535:
-        return True
-    return False
+    parts = ip.split('.')
+    if len(parts) != 4:
+        return False
+    for part in parts:
+        if not part.isdigit():
+            return False
+        num = int(part)
+        if num < 0 or num > 255:
+            return False
+    return True
