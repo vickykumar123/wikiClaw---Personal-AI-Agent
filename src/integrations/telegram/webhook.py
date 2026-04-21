@@ -7,6 +7,7 @@ import asyncio
 import json
 from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
+import time
 
 from fastapi import FastAPI, Request, HTTPException
 from telegram import Update
@@ -19,6 +20,9 @@ from constants import (
     MSG_WEBHOOK_SET,
     ERROR_WEBHOOK_SETUP,
 )
+
+# Request tracking enabled
+REQUEST_COUNT = 0
 
 # Set up logging
 logger = logging.getLogger(__name__)
