@@ -63,6 +63,15 @@ class WebhookServer:
         # Register routes
         self._setup_routes()
 
+        # Initialize request counter
+        self.request_count = 0
+
+        # Middleware to count incoming requests
+        @self.app.middleware("http")
+        async def count_requests(request: Request, call_next):
+            self.request_count += 1
+            return await call_next(request)
+
     def _setup_routes(self) -> None:
         """Set up webhook endpoints for each platform."""
 
@@ -109,6 +118,12 @@ class WebhookServer:
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Placeholder for future platforms
+        @self.app.get("/metrics")
+        async def metrics():
+            """Metrics endpoint."""
+            logger.info("Metrics endpoint called")
+            return {"requests_handled": self.request_count}
+
         @self.app.post("/webhook/whatsapp")
         async def whatsapp_webhook(request: Request):
             """Handle incoming WhatsApp webhook (future)."""
