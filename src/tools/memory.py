@@ -34,9 +34,12 @@ class SearchMemoryTool(BaseTool):
             embeddings_client: OpenAI embeddings client
             user_id: Current user's ID (for filtering)
         """
-        self.db = db
-        self.embeddings = embeddings_client
-        self.user_id = user_id
+        try:
+            self.db = db
+            self.embeddings = embeddings_client
+            self.user_id = user_id
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     @property
     def name(self) -> str:
@@ -103,14 +106,8 @@ class SearchMemoryTool(BaseTool):
                 success=True,
                 data="\n".join(memories)
             )
-
         except Exception as e:
-            logger.error(f"Memory search failed: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
 
 class SaveMemoryTool(BaseTool):
@@ -126,9 +123,12 @@ class SaveMemoryTool(BaseTool):
         embeddings_client: EmbeddingsClient,
         user_id: str
     ):
-        self.db = db
-        self.embeddings = embeddings_client
-        self.user_id = user_id
+        try:
+            self.db = db
+            self.embeddings = embeddings_client
+            self.user_id = user_id
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     @property
     def name(self) -> str:
@@ -202,9 +202,4 @@ class SaveMemoryTool(BaseTool):
             )
 
         except Exception as e:
-            logger.error(f"Failed to save memory: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
