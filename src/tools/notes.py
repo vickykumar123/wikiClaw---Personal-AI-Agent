@@ -111,9 +111,12 @@ class SearchNotesTool(BaseTool):
         user_id: str
     ):
         logger.info(f"Initializing SearchNotesTool for user_id: {user_id}")
-        self.db = db
-        self.embeddings = embeddings_client
-        self.user_id = user_id
+        try:
+            self.db = db
+            self.embeddings = embeddings_client
+            self.user_id = user_id
+        except Exception as e:
+            raise RuntimeError(f"Failed to initialize SearchNotesTool: {e}")
 
     @property
     def name(self) -> str:
@@ -173,21 +176,19 @@ class SearchNotesTool(BaseTool):
             )
 
         except Exception as e:
-            logger.error(f"Failed to search notes: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(f"Failed to search notes: {e}")
 
 
 class ListNotesTool(BaseTool):
     """Tool for listing all notes."""
 
-    def __init__(self, db: MongoDB, user_id: str):
-        logger.info(f"Initializing ListNotesTool for user_id: {user_id}")
-        self.db = db
-        self.user_id = user_id
+        def __init__(self, db: MongoDB, user_id: str):
+            logger.info(f"Initializing ListNotesTool for user_id: {user_id}")
+            try:
+                self.db = db
+                self.user_id = user_id
+            except Exception as e:
+                raise RuntimeError(f"Failed to initialize ListNotesTool: {e}")
 
     @property
     def name(self) -> str:
@@ -252,12 +253,7 @@ class ListNotesTool(BaseTool):
             )
 
         except Exception as e:
-            logger.error(f"Failed to list notes: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(f"Failed to list notes: {e}")
 
 
 class DeleteNoteTool(BaseTool):
@@ -265,8 +261,11 @@ class DeleteNoteTool(BaseTool):
 
     def __init__(self, db: MongoDB, user_id: str):
         logger.info(f"Initializing DeleteNoteTool for user_id: {user_id}")
-        self.db = db
-        self.user_id = user_id
+        try:
+            self.db = db
+            self.user_id = user_id
+        except Exception as e:
+            raise RuntimeError(f"Failed to initialize DeleteNoteTool: {e}")
 
     @property
     def name(self) -> str:
@@ -314,9 +313,4 @@ class DeleteNoteTool(BaseTool):
                 )
 
         except Exception as e:
-            logger.error(f"Failed to delete note: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(f"Failed to delete note: {e}")
