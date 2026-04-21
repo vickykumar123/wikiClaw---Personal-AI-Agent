@@ -7,6 +7,7 @@ import asyncio
 import json
 from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
+import time
 
 from fastapi import FastAPI, Request, HTTPException
 from telegram import Update
@@ -19,6 +20,9 @@ from constants import (
     MSG_WEBHOOK_SET,
     ERROR_WEBHOOK_SETUP,
 )
+
+# Request tracking enabled
+REQUEST_COUNT = 0
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -50,6 +54,7 @@ class WebhookServer:
         self.ngrok_auth_token = ngrok_auth_token
         self.ngrok_tunnel = None
         self.webhook_url: Optional[str] = None
+        self.requests_handled = 0
 
         # Platform handlers - will be registered by each platform
         self._telegram_bot = None
@@ -72,6 +77,12 @@ class WebhookServer:
             logger.info('Health check requested')
             return {"status": "ok"}
 
+        @self.app.get("/healthz")
+        async def healthz():
+            """Extended health check endpoint."""
+            logger.info('Healthz check requested')
+            return {"status": "healthy", "uptime": "ok"}
+
         @self.app.post("/webhook/telegram")
         async def telegram_webhook(request: Request):
             """
@@ -80,6 +91,7 @@ class WebhookServer:
             Telegram sends updates as JSON POST requests.
             """
             logger.info(f"Received Telegram webhook request from {request.client.host} at {request.headers.get('date', 'unknown')}")
+            self.requests_handled += 1
             if not self._telegram_bot:
                 logger.warning("Telegram bot not configured")
                 raise HTTPException(status_code=503, detail="Telegram bot not configured")
@@ -103,10 +115,16 @@ class WebhookServer:
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Placeholder for future platforms
+        @self.app.get("/metrics")
+        async def metrics():
+            """Metrics endpoint."""
+            return {"requests_handled": self.requests_handled}
+
         @self.app.post("/webhook/whatsapp")
         async def whatsapp_webhook(request: Request):
             """Handle incoming WhatsApp webhook (future)."""
             logger.info("Received WhatsApp webhook request")
+            self.requests_handled += 1
             return {"ok": True, "message": "WhatsApp webhook not implemented yet"}
 
     @asynccontextmanager
