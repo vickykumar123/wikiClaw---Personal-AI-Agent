@@ -20,6 +20,9 @@ from constants import (
     ERROR_WEBHOOK_SETUP,
 )
 
+# Request tracking enabled
+REQUEST_COUNT = 0
+
 # Set up logging
 logger = logging.getLogger(__name__)
 
