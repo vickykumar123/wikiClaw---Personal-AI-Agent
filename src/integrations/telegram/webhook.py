@@ -59,6 +59,13 @@ class WebhookServer:
             title="AI Agent Webhook Server",
             lifespan=self._lifespan
         )
+        self.requests_handled = 0
+
+        @self.app.middleware("http")
+        async def _increment_requests(request: Request, call_next):
+            self.requests_handled += 1
+            response = await call_next(request)
+            return response
 
         # Register routes
         self._setup_routes()
@@ -77,6 +84,11 @@ class WebhookServer:
             """Healthz check endpoint."""
             logger.info('Healthz check requested')
             return {"status": "healthy", "uptime": "ok"}
+
+        @self.app.get("/metrics")
+        async def metrics():
+            """Metrics endpoint."""
+            return {"requests_handled": self.requests_handled}
 
         @self.app.post("/webhook/telegram")
         async def telegram_webhook(request: Request):
