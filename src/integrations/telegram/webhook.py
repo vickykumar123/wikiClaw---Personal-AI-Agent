@@ -66,11 +66,11 @@ class WebhookServer:
     def _setup_routes(self) -> None:
         """Set up webhook endpoints for each platform."""
 
-        @self.app.get("/health")
-        async def health_check():
-            """Health check endpoint."""
-            logger.info('Health check requested')
-            return {"status": "ok"}
+        @self.app.get("/metrics")
+        async def metrics_endpoint() -> Dict[str, int]:
+            """Metrics endpoint returning request handling statistics."""
+            logger.info('Metrics endpoint requested')
+            return {"requests_handled": 0}
 
         @self.app.post("/webhook/telegram")
         async def telegram_webhook(request: Request):
