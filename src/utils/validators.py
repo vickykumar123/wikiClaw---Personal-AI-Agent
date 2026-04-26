@@ -11,7 +11,33 @@ from __future__ import annotations
 import re
 from urllib.parse import urlparse
 
-__all__: list[str] = ["validate_url", "validate_email", "validate_port"]
+__all__: list[str] = ["validate_url", "validate_email", "validate_port", "validate_phone"]
+
+def validate_phone(phone: str) -> bool:
+    """Validate a phone number.
+
+    The function checks that ``phone`` consists of digits and may include an
+    optional leading ``+`` as well as spaces, dashes ``-`` and parentheses
+    ``()``. A regular expression is used for validation; if the pattern does
+    not match, a ``ValueError`` is raised.
+
+    Args:
+        phone: The phone number string to validate.
+
+    Returns:
+        ``True`` if the phone number matches the allowed format.
+
+    Raises:
+        ValueError: If ``phone`` is empty or does not conform to the expected
+            phone number format.
+    """
+    if not isinstance(phone, str) or not phone:
+        raise ValueError("Phone number must be a non‑empty string.")
+    phone_pattern = re.compile(r"^\+?[0-9\s\-\(\)]+$")
+    if not phone_pattern.fullmatch(phone):
+        raise ValueError(f"Invalid phone number: '{phone}'.")
+    return True
+
 
 def validate_port(port: int) -> bool:
     """Validate a network port number.
