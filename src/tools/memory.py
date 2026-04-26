@@ -103,14 +103,8 @@ class SearchMemoryTool(BaseTool):
                 success=True,
                 data="\n".join(memories)
             )
-
         except Exception as e:
-            logger.error(f"Memory search failed: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
 
 class SaveMemoryTool(BaseTool):
@@ -174,11 +168,11 @@ class SaveMemoryTool(BaseTool):
         Returns:
             ToolResult indicating success/failure
         """
-        # Handle LLM sending 'type' instead of 'memory_type'
-        if memory_type is None:
-            memory_type = kwargs.get('type', 'fact')
-
         try:
+            # Handle LLM sending 'type' instead of 'memory_type'
+            if memory_type is None:
+                memory_type = kwargs.get('type', 'fact')
+
             logger.info(f"Saving memory [{memory_type}]: {content[:50]}...")
 
             # Generate embedding
@@ -200,11 +194,5 @@ class SaveMemoryTool(BaseTool):
                 success=True,
                 data=f"Remembered: {content}"
             )
-
         except Exception as e:
-            logger.error(f"Failed to save memory: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
