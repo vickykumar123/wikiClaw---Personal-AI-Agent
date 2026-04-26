@@ -52,3 +52,30 @@ def validate_port(port: int) -> bool:
         otherwise ``False``.
     """
     return isinstance(port, int) and 0 <= port <= 65535
+
+def validate_phone(phone: str) -> None:
+    """Validate that a phone number matches common patterns.
+
+    The function checks for an optional leading ``+`` followed by digits,
+    allowing spaces, dashes ``-`` or parentheses ``()`` as separators.
+    It raises a ``ValueError`` if the input does not conform to the pattern.
+
+    Args:
+        phone: The phone number string to validate.
+
+    Raises:
+        ValueError: If ``phone`` does not match the expected format.
+
+    Examples:
+        >>> validate_phone("+1 (555) 123-4567")
+        >>> validate_phone("5551234567")
+        >>> validate_phone("invalid")
+        Traceback (most recent call last):
+            ...
+        ValueError: Invalid phone number format: invalid
+    """
+    phone_regex: Pattern[str] = re.compile(
+        r'^\+?\d[\d\s\-\(\)]*$'
+    )
+    if not phone_regex.fullmatch(phone):
+        raise ValueError(f"Invalid phone number format: {phone}")
