@@ -94,11 +94,7 @@ class CreateNoteTool(BaseTool):
 
         except Exception as e:
             logger.error(f"Failed to create note: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(str(e))
 
 
 class SearchNotesTool(BaseTool):
