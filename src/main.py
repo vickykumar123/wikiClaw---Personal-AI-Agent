@@ -1,4 +1,5 @@
 # WikiClaw Personal AI Agent - Main Entry Point
+"""WikiClaw - Personal AI Agent. Main application entry point."""
 # ============================================
 # MAIN - Application entry point
 # ============================================
