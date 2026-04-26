@@ -50,6 +50,7 @@ class WebhookServer:
         self.ngrok_auth_token = ngrok_auth_token
         self.ngrok_tunnel = None
         self.webhook_url: Optional[str] = None
+        self.request_count = 0
 
         # Platform handlers - will be registered by each platform
         self._telegram_bot = None
@@ -63,18 +64,23 @@ class WebhookServer:
         # Register routes
         self._setup_routes()
 
+    def _increment_request_count(self):
+        self.request_count += 1
+
     def _setup_routes(self) -> None:
         """Set up webhook endpoints for each platform."""
 
         @self.app.get("/health")
         async def health_check():
             """Health check endpoint."""
+            self._increment_request_count()
             logger.info('Health check requested')
             return {"status": "ok"}
 
         @self.app.get("/healthz")
         async def healthz():
             """Extended health check endpoint."""
+            self._increment_request_count()
             logger.info('Healthz check requested')
             return {"status": "healthy", "uptime": "ok"}
 
@@ -85,6 +91,7 @@ class WebhookServer:
 
             Telegram sends updates as JSON POST requests.
             """
+            self._increment_request_count()
             logger.info(f"Received Telegram webhook request from {request.client.host} at {request.headers.get('date', 'unknown')}")
             if not self._telegram_bot:
                 logger.warning("Telegram bot not configured")
@@ -109,9 +116,16 @@ class WebhookServer:
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Placeholder for future platforms
+        @self.app.get("/metrics")
+        async def metrics():
+            """Metrics endpoint."""
+            self._increment_request_count()
+            return {"requests_handled": self.request_count}
+
         @self.app.post("/webhook/whatsapp")
         async def whatsapp_webhook(request: Request):
             """Handle incoming WhatsApp webhook (future)."""
+            self._increment_request_count()
             logger.info("Received WhatsApp webhook request")
             return {"ok": True, "message": "WhatsApp webhook not implemented yet"}
 
