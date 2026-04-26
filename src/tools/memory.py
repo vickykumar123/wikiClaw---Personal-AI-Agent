@@ -103,14 +103,9 @@ class SearchMemoryTool(BaseTool):
                 success=True,
                 data="\n".join(memories)
             )
-
         except Exception as e:
             logger.error(f"Memory search failed: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(e)
 
 
 class SaveMemoryTool(BaseTool):
@@ -203,8 +198,4 @@ class SaveMemoryTool(BaseTool):
 
         except Exception as e:
             logger.error(f"Failed to save memory: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(e)
