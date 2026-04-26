@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from telegram import Update
 import uvicorn
+import time
 from pyngrok import ngrok
 
 from constants import (
@@ -19,6 +20,9 @@ from constants import (
     MSG_WEBHOOK_SET,
     ERROR_WEBHOOK_SETUP,
 )
+
+# Request tracking enabled
+REQUEST_COUNT = 0
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -60,6 +64,15 @@ class WebhookServer:
             lifespan=self._lifespan
         )
 
+        # Initialize request counter
+        self.request_count = 0
+
+        @self.app.middleware("http")
+        async def count_requests(request: Request, call_next):
+            self.request_count += 1
+            response = await call_next(request)
+            return response
+
         # Register routes
         self._setup_routes()
 
@@ -71,6 +84,17 @@ class WebhookServer:
             """Health check endpoint."""
             logger.info('Health check requested')
             return {"status": "ok"}
+
+        @self.app.get("/healthz")
+        async def healthz():
+            """Healthz endpoint."""
+            logger.info('Healthz check requested')
+            return {"status": "healthy", "uptime": "ok"}
+
+        @self.app.get("/metrics")
+        async def metrics():
+            """Metrics endpoint."""
+            return {"requests_handled": self.request_count}
 
         @self.app.post("/webhook/telegram")
         async def telegram_webhook(request: Request):
