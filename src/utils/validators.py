@@ -11,7 +11,31 @@ from __future__ import annotations
 import re
 from urllib.parse import urlparse
 
-__all__: list[str] = ["validate_url", "validate_email"]
+__all__: list[str] = ["validate_url", "validate_email", "validate_port"]
+
+def validate_port(port: int) -> bool:
+    """Validate a network port number.
+
+    The ``port`` must be an integer in the range 1‑65535 inclusive. If the
+    ``port`` is not an integer or falls outside this range, a ``ValueError``
+    is raised with an informative message. Returns ``True`` when the port is
+    valid.
+
+    Args:
+        port: The port number to validate.
+
+    Returns:
+        ``True`` if the ``port`` is within the valid range.
+
+    Raises:
+        ValueError: If ``port`` is not an integer or is outside the range
+            1‑65535.
+    """
+    if not isinstance(port, int):
+        raise ValueError("Port must be an integer.")
+    if not (1 <= port <= 65535):
+        raise ValueError(f"Port {port} is out of valid range (1-65535).")
+    return True
 
 
 def validate_url(url: str) -> bool:
