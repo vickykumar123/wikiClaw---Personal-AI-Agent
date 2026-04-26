@@ -40,3 +40,15 @@ def validate_email(email: str) -> bool:
     """
     email_regex: Pattern[str] = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
     return bool(email_regex.match(email))
+
+def validate_port(port: int) -> bool:
+    """Validate that a port number is within the valid range (0-65535).
+
+    Args:
+        port: The port number to validate.
+
+    Returns:
+        True if ``port`` is an integer between 0 and 65535 inclusive;
+        otherwise ``False``.
+    """
+    return isinstance(port, int) and 0 <= port <= 65535
