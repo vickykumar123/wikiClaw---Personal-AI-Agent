@@ -60,6 +60,16 @@ class WebhookServer:
             lifespan=self._lifespan
         )
 
+        # Initialize request counter
+        self.app.state.request_counter = 0
+
+        # HTTP middleware to count requests
+        @self.app.middleware("http")
+        async def count_requests(request: Request, call_next):
+            self.app.state.request_counter += 1
+            response = await call_next(request)
+            return response
+
         # Register routes
         self._setup_routes()
 
