@@ -93,12 +93,7 @@ class CreateNoteTool(BaseTool):
             )
 
         except Exception as e:
-            logger.error(f"Failed to create note: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
 
 class SearchNotesTool(BaseTool):
@@ -173,12 +168,7 @@ class SearchNotesTool(BaseTool):
             )
 
         except Exception as e:
-            logger.error(f"Failed to search notes: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
 
 class ListNotesTool(BaseTool):
@@ -250,15 +240,8 @@ class ListNotesTool(BaseTool):
                 success=True,
                 data=f"Your notes:\n" + "\n".join(notes_text)
             )
-
         except Exception as e:
-            logger.error(f"Failed to list notes: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
-
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
 class DeleteNoteTool(BaseTool):
     """Tool for deleting a note."""
@@ -314,9 +297,4 @@ class DeleteNoteTool(BaseTool):
                 )
 
         except Exception as e:
-            logger.error(f"Failed to delete note: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
