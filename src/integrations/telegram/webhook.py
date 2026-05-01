@@ -109,6 +109,16 @@ class WebhookServer:
             logger.info("Received WhatsApp webhook request")
             return {"ok": True, "message": "WhatsApp webhook not implemented yet"}
 
+        @self.app.get("/metrics")
+        async def metrics():
+            """Metrics endpoint providing request handling statistics.
+
+            Returns:
+                dict: A dictionary with the number of requests handled.
+            """
+            logger.info("Metrics endpoint requested")
+            return {"requests_handled": 0}
+
     @asynccontextmanager
     async def _lifespan(self, app: FastAPI):
         """
