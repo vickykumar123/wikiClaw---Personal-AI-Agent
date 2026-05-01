@@ -312,11 +312,5 @@ class DeleteNoteTool(BaseTool):
                     success=True,
                     data=f"Note '{title}' not found."
                 )
-
         except Exception as e:
-            logger.error(f"Failed to delete note: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(f"Failed to delete note: {e}") from e
