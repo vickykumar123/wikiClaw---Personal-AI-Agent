@@ -5,6 +5,7 @@ from typing import Final
 __all__: Final = [
     "validate_url",
     "validate_email",
+    "validate_port",
 ]
 
 def validate_url(url: str) -> bool:
@@ -59,3 +60,20 @@ def validate_email(email: str) -> bool:
         r"(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"
     )
     return bool(email_regex.fullmatch(email))
+
+
+def validate_port(port: int) -> bool:
+    """Validate that a port number is within the valid range.
+
+    Args:
+        port: The port number to validate.
+
+    Returns:
+        True if ``port`` is an integer between 1 and 65535, otherwise False.
+
+    Raises:
+        ValueError: If ``port`` is not an integer.
+    """
+    if not isinstance(port, int):
+        raise ValueError("Port must be an integer.")
+    return 1 <= port <= 65535
