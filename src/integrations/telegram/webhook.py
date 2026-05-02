@@ -60,6 +60,21 @@ class WebhookServer:
             lifespan=self._lifespan
         )
 
+        # Middleware to log each incoming HTTP request
+        @self.app.middleware("http")
+        async def log_requests(request: Request, call_next):
+            """
+            Log HTTP request method, URL, and headers at DEBUG level.
+            """
+            logger.debug(
+                "Incoming request: %s %s Headers: %s",
+                request.method,
+                request.url,
+                dict(request.headers)
+            )
+            response = await call_next(request)
+            return response
+
         # Register routes
         self._setup_routes()
 
@@ -90,8 +105,12 @@ class WebhookServer:
                     pretty = json.dumps(data, indent=2)
                 except Exception:
                     pretty = str(data)
+                logger.debug(f"Full Telegram webhook payload: {pretty}")
                 logger.info(f"Received Telegram webhook: {pretty[:500]}")
                 update = Update.de_json(data, self._telegram_bot.application.bot)
+
+                # Log the Update object details
+                logger.debug(f"Telegram Update object: {update}")
 
                 # Process the update
                 await self._telegram_bot.application.process_update(update)
@@ -107,6 +126,18 @@ class WebhookServer:
         async def whatsapp_webhook(request: Request):
             """Handle incoming WhatsApp webhook (future)."""
             logger.info("Received WhatsApp webhook request")
+            # Log request method, path, and raw JSON body for debugging
+            body_bytes = await request.body()
+            try:
+                body_str = body_bytes.decode()
+            except Exception:
+                body_str = str(body_bytes)
+            logger.debug(
+                "WhatsApp webhook request - method: %s, path: %s, body: %s",
+                request.method,
+                request.url.path,
+                body_str,
+            )
             return {"ok": True, "message": "WhatsApp webhook not implemented yet"}
 
     @asynccontextmanager
@@ -150,6 +181,9 @@ class WebhookServer:
         # Start tunnel
         self.ngrok_tunnel = ngrok.connect(self.port, "http")
         self.webhook_url = self.ngrok_tunnel.public_url
+        logger.debug(f"ngrok tunnel object: {self.ngrok_tunnel}")
+        logger.debug(f"ngrok tunnel public URL: {self.ngrok_tunnel.public_url}")
+        logger.debug(f"ngrok tunnel config: {self.ngrok_tunnel.config}")
 
         # Ensure HTTPS
         if self.webhook_url.startswith("http://"):
@@ -178,6 +212,7 @@ class WebhookServer:
         try:
             webhook_full_url = f"{self.webhook_url}/webhook/telegram"
 
+            logger.debug(f"Setting Telegram webhook URL: {webhook_full_url}")
             await self._telegram_bot.application.bot.set_webhook(
                 url=webhook_full_url
             )
@@ -200,6 +235,7 @@ class WebhookServer:
             if self._telegram_bot:
                 await self._telegram_bot.application.bot.delete_webhook()
                 logger.info("Telegram webhook removed")
+                logger.debug("Telegram webhook removal confirmed")
             return True
         except Exception as e:
             logger.error(f"Failed to remove webhook: {e}")

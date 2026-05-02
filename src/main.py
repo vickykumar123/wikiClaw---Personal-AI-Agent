@@ -32,8 +32,11 @@ def setup_logging() -> None:
     Sets up console logging with timestamp and level.
     Sync function - just configures loggers, no I/O.
     """
+    import os
+    debug = os.getenv("DEBUG_LOGGING", "").lower()
+    level = logging.DEBUG if debug in ("1", "true", "yes", "on") else logging.INFO
     logging.basicConfig(
-        level=logging.INFO,
+        level=level,
         format=LOG_FORMAT,
         datefmt=LOG_DATE_FORMAT
     )
