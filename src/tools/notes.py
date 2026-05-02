@@ -22,45 +22,57 @@ class CreateNoteTool(BaseTool):
         embeddings_client: EmbeddingsClient,
         user_id: str
     ):
-        logger.info(f"Initializing CreateNoteTool for user_id: {user_id}")
-        self.db = db
-        self.embeddings = embeddings_client
-        self.user_id = user_id
+        try:
+            logger.info(f"Initializing CreateNoteTool for user_id: {user_id}")
+            self.db = db
+            self.embeddings = embeddings_client
+            self.user_id = user_id
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     @property
     def name(self) -> str:
-        return "create_note"
+        try:
+            return "create_note"
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     @property
     def description(self) -> str:
-        return (
-            "Create a new note with a title and content. "
-            "Use this when the user explicitly asks to save/create a note, "
-            "write something down, or make a reminder note. "
-            "Optionally add tags for organization."
-        )
+        try:
+            return (
+                "Create a new note with a title and content. "
+                "Use this when the user explicitly asks to save/create a note, "
+                "write something down, or make a reminder note. "
+                "Optionally add tags for organization."
+            )
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     @property
     def parameters(self) -> Dict[str, Any]:
-        return {
-            "type": "object",
-            "properties": {
-                "title": {
-                    "type": "string",
-                    "description": "Title of the note (short, descriptive)"
+        try:
+            return {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "Title of the note (short, descriptive)"
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "Content of the note"
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Optional tags for categorization (e.g., ['work', 'important'])"
+                    }
                 },
-                "content": {
-                    "type": "string",
-                    "description": "Content of the note"
-                },
-                "tags": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Optional tags for categorization (e.g., ['work', 'important'])"
-                }
-            },
-            "required": ["title", "content"]
-        }
+                "required": ["title", "content"]
+            }
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     async def execute(
         self,
@@ -91,14 +103,9 @@ class CreateNoteTool(BaseTool):
                 success=True,
                 data=f"Note '{title}' created{tags_str}."
             )
-
         except Exception as e:
             logger.error(f"Failed to create note: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
 
 class SearchNotesTool(BaseTool):
@@ -110,35 +117,47 @@ class SearchNotesTool(BaseTool):
         embeddings_client: EmbeddingsClient,
         user_id: str
     ):
-        logger.info(f"Initializing SearchNotesTool for user_id: {user_id}")
-        self.db = db
-        self.embeddings = embeddings_client
-        self.user_id = user_id
+        try:
+            logger.info(f"Initializing SearchNotesTool for user_id: {user_id}")
+            self.db = db
+            self.embeddings = embeddings_client
+            self.user_id = user_id
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     @property
     def name(self) -> str:
-        return "search_notes"
+        try:
+            return "search_notes"
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     @property
     def description(self) -> str:
-        return (
-            "Search through user's notes using semantic search. "
-            "Use this when the user asks to find a note, "
-            "or asks about something they wrote down."
-        )
+        try:
+            return (
+                "Search through user's notes using semantic search. "
+                "Use this when the user asks to find a note, "
+                "or asks about something they wrote down."
+            )
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     @property
     def parameters(self) -> Dict[str, Any]:
-        return {
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "What to search for in notes"
-                }
-            },
-            "required": ["query"]
-        }
+        try:
+            return {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "What to search for in notes"
+                    }
+                },
+                "required": ["query"]
+            }
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     async def execute(self, query: str) -> ToolResult:
         """Search notes by content."""
@@ -171,48 +190,55 @@ class SearchNotesTool(BaseTool):
                 success=True,
                 data="\n\n".join(notes_text)
             )
-
         except Exception as e:
             logger.error(f"Failed to search notes: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
 
 class ListNotesTool(BaseTool):
     """Tool for listing all notes."""
 
     def __init__(self, db: MongoDB, user_id: str):
-        logger.info(f"Initializing ListNotesTool for user_id: {user_id}")
-        self.db = db
-        self.user_id = user_id
+        try:
+            logger.info(f"Initializing ListNotesTool for user_id: {user_id}")
+            self.db = db
+            self.user_id = user_id
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     @property
     def name(self) -> str:
-        return "list_notes"
+        try:
+            return "list_notes"
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     @property
     def description(self) -> str:
-        return (
-            "List all notes or notes with a specific tag. "
-            "Use this when the user asks to see all their notes, "
-            "or wants to see notes in a category."
-        )
+        try:
+            return (
+                "List all notes or notes with a specific tag. "
+                "Use this when the user asks to see all their notes, "
+                "or wants to see notes in a category."
+            )
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     @property
     def parameters(self) -> Dict[str, Any]:
-        return {
-            "type": "object",
-            "properties": {
-                "tag": {
-                    "type": "string",
-                    "description": "Optional tag to filter notes by"
-                }
-            },
-            "required": []
-        }
+        try:
+            return {
+                "type": "object",
+                "properties": {
+                    "tag": {
+                        "type": "string",
+                        "description": "Optional tag to filter notes by"
+                    }
+                },
+                "required": []
+            }
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     async def execute(self, tag: str = None) -> ToolResult:
         """List notes, optionally filtered by tag."""
@@ -250,47 +276,54 @@ class ListNotesTool(BaseTool):
                 success=True,
                 data=f"Your notes:\n" + "\n".join(notes_text)
             )
-
         except Exception as e:
             logger.error(f"Failed to list notes: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
 
 class DeleteNoteTool(BaseTool):
     """Tool for deleting a note."""
 
     def __init__(self, db: MongoDB, user_id: str):
-        logger.info(f"Initializing DeleteNoteTool for user_id: {user_id}")
-        self.db = db
-        self.user_id = user_id
+        try:
+            logger.info(f"Initializing DeleteNoteTool for user_id: {user_id}")
+            self.db = db
+            self.user_id = user_id
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     @property
     def name(self) -> str:
-        return "delete_note"
+        try:
+            return "delete_note"
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     @property
     def description(self) -> str:
-        return (
-            "Delete a note by its title. "
-            "Use this when the user asks to remove or delete a specific note."
-        )
+        try:
+            return (
+                "Delete a note by its title. "
+                "Use this when the user asks to remove or delete a specific note."
+            )
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     @property
     def parameters(self) -> Dict[str, Any]:
-        return {
-            "type": "object",
-            "properties": {
-                "title": {
-                    "type": "string",
-                    "description": "Title of the note to delete"
-                }
-            },
-            "required": ["title"]
-        }
+        try:
+            return {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "Title of the note to delete"
+                    }
+                },
+                "required": ["title"]
+            }
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     async def execute(self, title: str) -> ToolResult:
         """Delete a note by title."""
@@ -312,11 +345,6 @@ class DeleteNoteTool(BaseTool):
                     success=True,
                     data=f"Note '{title}' not found."
                 )
-
         except Exception as e:
             logger.error(f"Failed to delete note: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e

@@ -34,35 +34,47 @@ class SearchMemoryTool(BaseTool):
             embeddings_client: OpenAI embeddings client
             user_id: Current user's ID (for filtering)
         """
-        self.db = db
-        self.embeddings = embeddings_client
-        self.user_id = user_id
+        try:
+            self.db = db
+            self.embeddings = embeddings_client
+            self.user_id = user_id
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     @property
     def name(self) -> str:
-        return "search_memory"
+        try:
+            return "search_memory"
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     @property
     def description(self) -> str:
-        return (
-            "Search your memory for information about the user. "
-            "Use this when the user asks about their preferences, "
-            "past conversations, personal info, or anything you should remember. "
-            "Returns relevant context from previous interactions."
-        )
+        try:
+            return (
+                "Search your memory for information about the user. "
+                "Use this when the user asks about their preferences, "
+                "past conversations, personal info, or anything you should remember. "
+                "Returns relevant context from previous interactions."
+            )
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     @property
     def parameters(self) -> Dict[str, Any]:
-        return {
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "What to search for (e.g., 'user's favorite food', 'their job', 'programming preferences')"
-                }
-            },
-            "required": ["query"]
-        }
+        try:
+            return {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "What to search for (e.g., 'user's favorite food', 'their job', 'programming preferences')"
+                    }
+                },
+                "required": ["query"]
+            }
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     async def execute(self, query: str, limit: int = 5) -> ToolResult:
         """
@@ -103,14 +115,8 @@ class SearchMemoryTool(BaseTool):
                 success=True,
                 data="\n".join(memories)
             )
-
         except Exception as e:
-            logger.error(f"Memory search failed: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
 
 class SaveMemoryTool(BaseTool):
@@ -126,41 +132,53 @@ class SaveMemoryTool(BaseTool):
         embeddings_client: EmbeddingsClient,
         user_id: str
     ):
-        self.db = db
-        self.embeddings = embeddings_client
-        self.user_id = user_id
+        try:
+            self.db = db
+            self.embeddings = embeddings_client
+            self.user_id = user_id
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     @property
     def name(self) -> str:
-        return "save_memory"
+        try:
+            return "save_memory"
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     @property
     def description(self) -> str:
-        return (
-            "Save important information about the user to memory. "
-            "Use this when the user shares personal info, preferences, "
-            "facts about themselves, or anything worth remembering. "
-            "Types: 'profile' (name, job), 'preference' (likes/dislikes), "
-            "'fact' (general info), 'event' (things that happened)."
-        )
+        try:
+            return (
+                "Save important information about the user to memory. "
+                "Use this when the user shares personal info, preferences, "
+                "facts about themselves, or anything worth remembering. "
+                "Types: 'profile' (name, job), 'preference' (likes/dislikes), "
+                "'fact' (general info), 'event' (things that happened)."
+            )
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     @property
     def parameters(self) -> Dict[str, Any]:
-        return {
-            "type": "object",
-            "properties": {
-                "memory_type": {
-                    "type": "string",
-                    "enum": ["profile", "preference", "fact", "event"],
-                    "description": "Type of memory to save"
+        try:
+            return {
+                "type": "object",
+                "properties": {
+                    "memory_type": {
+                        "type": "string",
+                        "enum": ["profile", "preference", "fact", "event"],
+                        "description": "Type of memory to save"
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "The information to remember (e.g., 'User's name is John', 'Prefers Python over JavaScript')"
+                    }
                 },
-                "content": {
-                    "type": "string",
-                    "description": "The information to remember (e.g., 'User's name is John', 'Prefers Python over JavaScript')"
-                }
-            },
-            "required": ["memory_type", "content"]
-        }
+                "required": ["memory_type", "content"]
+            }
+        except Exception as e:
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
     async def execute(self, content: str, memory_type: str = None, **kwargs) -> ToolResult:
         """
@@ -200,11 +218,5 @@ class SaveMemoryTool(BaseTool):
                 success=True,
                 data=f"Remembered: {content}"
             )
-
         except Exception as e:
-            logger.error(f"Failed to save memory: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
