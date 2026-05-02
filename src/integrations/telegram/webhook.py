@@ -105,25 +105,24 @@ class WebhookServer:
         async def telegram_webhook(request: Request) -> Dict[str, Any]:
             """Handle incoming Telegram webhook.
 
-            Logs request details and processing steps for traceability.
-
             Args:
-                request: FastAPI Request containing the Telegram update payload.
+                request (Request): FastAPI Request containing the Telegram update payload.
 
             Returns:
-                A confirmation dictionary indicating successful processing.
+                Dict[str, Any]: A confirmation dictionary indicating successful processing.
 
             Raises:
                 HTTPException: If the Telegram bot is not configured or processing fails.
             """
-            # Log request details for traceability
+            # Log request details
             logger.info(
-                "Telegram webhook request - method: %s, path: %s, client_ip: %s, headers: %s",
+                "Telegram webhook request - method: %s, path: %s, client_ip: %s",
                 request.method,
                 request.url.path,
                 request.client.host if request.client else "unknown",
-                dict(request.headers),
             )
+            logger.debug("Request headers: %s", dict(request.headers))
+
             if not self._telegram_bot:
                 raise HTTPException(status_code=503, detail="Telegram bot not configured")
 
@@ -135,8 +134,9 @@ class WebhookServer:
                     pretty = json.dumps(data, indent=2)
                 except Exception:
                     pretty = str(data)
-                logger.debug(f"Full Telegram webhook payload: {pretty}")
-                logger.info(f"Received Telegram webhook: {pretty[:500]}")
+                logger.debug("Full Telegram webhook payload: %s", pretty)
+                logger.info("Received Telegram webhook: %s", pretty[:500])
+
                 update = Update.de_json(data, self._telegram_bot.application.bot)
 
                 # Log concise summary of the update (ID and type)
@@ -148,22 +148,35 @@ class WebhookServer:
                     )
                 except Exception:
                     update_type = "unknown"
-                logger.info(f"Telegram update received: id={getattr(update, \"update_id\", \"N/A\")}, type={update_type}")
+                logger.info(
+                    "Telegram update received: id=%s, type=%s",
+                    getattr(update, "update_id", "N/A"),
+                    update_type,
+                )
 
-                # Log the Update object details
-                logger.debug(f"Telegram Update object: {update}")
+                logger.debug("Telegram Update object: %s", update)
 
-                # Process the update
+                # Import time for duration measurement
+                from time import time
+                start_time = time()
                 logger.info("Processing Telegram update")
                 await self._telegram_bot.application.process_update(update)
-                logger.info("Finished processing Telegram update")
+                duration = time() - start_time
+                logger.info(
+                    "Finished processing Telegram update (duration %.3f seconds)",
+                    duration,
+                )
 
-                return {"ok": True}
+                response_payload = {"ok": True}
+                logger.info("Telegram webhook response payload: %s", response_payload)
+                return response_payload
 
             except Exception as e:
                 request_id = request.headers.get("X-Request-ID")
                 if request_id:
-                    logger.exception(f"Error processing Telegram webhook (request ID: {request_id})")
+                    logger.exception(
+                        "Error processing Telegram webhook (request ID: %s)", request_id
+                    )
                 else:
                     logger.exception("Error processing Telegram webhook")
                 raise HTTPException(status_code=500, detail=str(e))
