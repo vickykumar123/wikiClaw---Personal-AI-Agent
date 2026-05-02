@@ -102,17 +102,24 @@ class WebhookServer:
             return {"status": "ok"}
 
         @self.app.post("/webhook/telegram")
-        async def telegram_webhook(request: Request) -> Dict[str, Any]:
+        async def telegram_webhook(request: Request) -> Dict[str, bool]:
             """Handle incoming Telegram webhook.
 
+            This endpoint processes updates sent by Telegram, logs request details,
+            parses the update payload, forwards it to the bot's application for handling,
+            and returns a confirmation response.
+
             Args:
-                request (Request): FastAPI Request containing the Telegram update payload.
+                request (Request): FastAPI request containing the Telegram update
+                    payload as JSON.
 
             Returns:
-                Dict[str, Any]: A confirmation dictionary indicating successful processing.
+                Dict[str, bool]: A dictionary with a single key ``ok`` set to ``True``
+                    when processing succeeds.
 
             Raises:
-                HTTPException: If the Telegram bot is not configured or processing fails.
+                HTTPException: If the Telegram bot is not configured (503) or if an
+                    unexpected error occurs during processing (500).
             """
             # Log request details
             logger.info(
@@ -127,15 +134,16 @@ class WebhookServer:
                 raise HTTPException(status_code=503, detail="Telegram bot not configured")
 
             try:
-                # Parse the update
-                data = await request.json()
-                # Log receipt with truncated pretty JSON
-                try:
-                    pretty = json.dumps(data, indent=2)
-                except Exception:
-                    pretty = str(data)
-                logger.debug("Full Telegram webhook payload: %s", pretty)
-                logger.info("Received Telegram webhook: %s", pretty[:500])
+                    # Parse the update
+                    data = await request.json()
+                    logger.debug("Starting processing of Telegram webhook payload")
+                    # Log receipt with truncated pretty JSON
+                    try:
+                        pretty = json.dumps(data, indent=2)
+                    except Exception:
+                        pretty = str(data)
+                    logger.debug("Full Telegram webhook payload: %s", pretty)
+                    logger.info("Received Telegram webhook: %s", pretty[:500])
 
                 update = Update.de_json(data, self._telegram_bot.application.bot)
 
@@ -160,7 +168,9 @@ class WebhookServer:
                 from time import time
                 start_time = time()
                 logger.info("Processing Telegram update")
+                logger.info(f"Processing Telegram Update ID: {getattr(update, 'update_id', 'N/A')}")
                 await self._telegram_bot.application.process_update(update)
+                logger.info("Telegram webhook processed successfully")
                 duration = time() - start_time
                 logger.info(
                     "Finished processing Telegram update (duration %.3f seconds)",
@@ -169,16 +179,11 @@ class WebhookServer:
 
                 response_payload = {"ok": True}
                 logger.info("Telegram webhook response payload: %s", response_payload)
+                logger.debug("Returning response for Telegram webhook: {'ok': True}")
                 return response_payload
 
             except Exception as e:
-                request_id = request.headers.get("X-Request-ID")
-                if request_id:
-                    logger.exception(
-                        "Error processing Telegram webhook (request ID: %s)", request_id
-                    )
-                else:
-                    logger.exception("Error processing Telegram webhook")
+                logger.exception("Error processing Telegram webhook")
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Placeholder for future platforms
