@@ -3,6 +3,7 @@
 # WikiClaw Personal AI Agent - Main Entry Point
 # ===========================================
 
+"""WikiClaw - Personal AI Agent. Main application entry point."""
 import asyncio
 import logging
 import signal
