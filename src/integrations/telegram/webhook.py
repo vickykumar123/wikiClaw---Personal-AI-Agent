@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from telegram import Update
 import uvicorn
+import time
 from pyngrok import ngrok
 
 from constants import (
@@ -20,6 +21,8 @@ from constants import (
     ERROR_WEBHOOK_SETUP,
 )
 
+# Request tracking enabled
+REQUEST_COUNT = 0
 # Set up logging
 logger = logging.getLogger(__name__)
 
