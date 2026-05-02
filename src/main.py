@@ -1,6 +1,7 @@
 # ============================================
 # MAIN - Application entry point
-# ============================================
+# WikiClaw Personal AI Agent - Main Entry Point
+# ===========================================
 
 import asyncio
 import logging
