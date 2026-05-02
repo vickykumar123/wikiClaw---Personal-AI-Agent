@@ -82,18 +82,48 @@ class WebhookServer:
         """Set up webhook endpoints for each platform."""
 
         @self.app.get("/health")
-        async def health_check():
-            """Health check endpoint."""
-            logger.info("Health check endpoint called")
+        async def health_check(request: Request) -> Dict[str, str]:
+            """Health check endpoint.
+
+            Logs incoming health check request details at INFO level.
+
+            Args:
+                request: FastAPI Request object containing request metadata.
+
+            Returns:
+                A dictionary with a status key indicating service health.
+            """
+            logger.info(
+                "Health check request - method: %s, path: %s, client_ip: %s",
+                request.method,
+                request.url.path,
+                request.client.host if request.client else "unknown",
+            )
             return {"status": "ok"}
 
         @self.app.post("/webhook/telegram")
-        async def telegram_webhook(request: Request):
-            """
-            Handle incoming Telegram webhook.
+        async def telegram_webhook(request: Request) -> Dict[str, Any]:
+            """Handle incoming Telegram webhook.
 
-            Telegram sends updates as JSON POST requests.
+            Logs request details and processing steps for traceability.
+
+            Args:
+                request: FastAPI Request containing the Telegram update payload.
+
+            Returns:
+                A confirmation dictionary indicating successful processing.
+
+            Raises:
+                HTTPException: If the Telegram bot is not configured or processing fails.
             """
+            # Log request details for traceability
+            logger.info(
+                "Telegram webhook request - method: %s, path: %s, client_ip: %s, headers: %s",
+                request.method,
+                request.url.path,
+                request.client.host if request.client else "unknown",
+                dict(request.headers),
+            )
             if not self._telegram_bot:
                 raise HTTPException(status_code=503, detail="Telegram bot not configured")
 
@@ -109,16 +139,33 @@ class WebhookServer:
                 logger.info(f"Received Telegram webhook: {pretty[:500]}")
                 update = Update.de_json(data, self._telegram_bot.application.bot)
 
+                # Log concise summary of the update (ID and type)
+                try:
+                    update_type = (
+                        update.effective_message.__class__.__name__
+                        if update.effective_message
+                        else "unknown"
+                    )
+                except Exception:
+                    update_type = "unknown"
+                logger.info(f"Telegram update received: id={getattr(update, \"update_id\", \"N/A\")}, type={update_type}")
+
                 # Log the Update object details
                 logger.debug(f"Telegram Update object: {update}")
 
                 # Process the update
+                logger.info("Processing Telegram update")
                 await self._telegram_bot.application.process_update(update)
+                logger.info("Finished processing Telegram update")
 
                 return {"ok": True}
 
             except Exception as e:
-                logger.error(f"Error processing Telegram webhook: {e}")
+                request_id = request.headers.get("X-Request-ID")
+                if request_id:
+                    logger.exception(f"Error processing Telegram webhook (request ID: {request_id})")
+                else:
+                    logger.exception("Error processing Telegram webhook")
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Placeholder for future platforms
