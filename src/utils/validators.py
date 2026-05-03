@@ -35,3 +35,19 @@ def validate_email(email: str) -> bool:
         raise ValueError("email must be a string")
     pattern = r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
     return re.match(pattern, email) is not None
+
+def validate_port(port: int) -> bool:
+    """Validate that a port number is an integer within the range 1-65535.
+
+    Args:
+        port: The port number to validate.
+
+    Returns:
+        True if `port` is within the valid range, otherwise False.
+
+    Raises:
+        ValueError: If `port` is not an integer.
+    """
+    if not isinstance(port, int):
+        raise ValueError("port must be an integer")
+    return 1 <= port <= 65535
