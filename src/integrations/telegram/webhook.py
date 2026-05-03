@@ -9,6 +9,7 @@ from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse
 from telegram import Update
 import uvicorn
 from pyngrok import ngrok
@@ -71,6 +72,11 @@ class WebhookServer:
             """Health check endpoint."""
             logger.info('Health check requested')
             return {"status": "ok"}
+
+        @self.app.get("/metrics")
+        async def metrics():
+            """Metrics endpoint providing request handling stats."""
+            return JSONResponse(content={'requests_handled': 0})
 
         @self.app.post("/webhook/telegram")
         async def telegram_webhook(request: Request):
