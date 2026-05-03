@@ -50,6 +50,7 @@ class WebhookServer:
         self.ngrok_auth_token = ngrok_auth_token
         self.ngrok_tunnel = None
         self.webhook_url: Optional[str] = None
+        self.request_count = 0
 
         # Platform handlers - will be registered by each platform
         self._telegram_bot = None
@@ -77,6 +78,11 @@ class WebhookServer:
             """Healthz endpoint."""
             return {"status": "healthy", "uptime": "ok"}
 
+        @self.app.get("/metrics")
+        async def metrics():
+            """Metrics endpoint."""
+            return {"requests_handled": self.request_count}
+
         @self.app.post("/webhook/telegram")
         async def telegram_webhook(request: Request):
             """
@@ -89,6 +95,7 @@ class WebhookServer:
                 logger.warning("Telegram bot not configured")
                 raise HTTPException(status_code=503, detail="Telegram bot not configured")
 
+            self.request_count += 1
             try:
                 # Parse the update
                 data = await request.json()
@@ -112,6 +119,7 @@ class WebhookServer:
         async def whatsapp_webhook(request: Request):
             """Handle incoming WhatsApp webhook (future)."""
             logger.info("Received WhatsApp webhook request")
+            self.request_count += 1
             return {"ok": True, "message": "WhatsApp webhook not implemented yet"}
 
     @asynccontextmanager
