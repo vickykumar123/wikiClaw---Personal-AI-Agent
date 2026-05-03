@@ -75,42 +75,37 @@ class SearchMemoryTool(BaseTool):
         Returns:
             ToolResult with matching context entries
         """
-        try:
-            logger.info(f"Searching memory for: {query}")
+            try:
+                logger.info(f"Searching memory for: {query}")
 
-            # Generate embedding for query
-            embedding = await self.embeddings.get_embedding(query)
+                # Generate embedding for query
+                embedding = await self.embeddings.get_embedding(query)
 
-            # Search MongoDB
-            results = await self.db.search_context(
-                user_id=self.user_id,
-                embedding=embedding,
-                limit=limit
-            )
-
-            if not results:
-                return ToolResult(
-                    success=True,
-                    data="No relevant memories found."
+                # Search MongoDB
+                results = await self.db.search_context(
+                    user_id=self.user_id,
+                    embedding=embedding,
+                    limit=limit
                 )
 
-            # Format results
-            memories = []
-            for ctx in results:
-                memories.append(f"[{ctx.type}] {ctx.value}")
+                if not results:
+                    return ToolResult(
+                        success=True,
+                        data="No relevant memories found."
+                    )
 
-            return ToolResult(
-                success=True,
-                data="\n".join(memories)
-            )
+                # Format results
+                memories = []
+                for ctx in results:
+                    memories.append(f"[{ctx.type}] {ctx.value}")
 
-        except Exception as e:
-            logger.error(f"Memory search failed: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+                return ToolResult(
+                    success=True,
+                    data="\n".join(memories)
+                )
+            except Exception as e:
+                logger.error(f"Memory search failed: {e}")
+                raise RuntimeError(f"Tool error in {__name__}: {e}") from e
 
 
 class SaveMemoryTool(BaseTool):
@@ -200,11 +195,6 @@ class SaveMemoryTool(BaseTool):
                 success=True,
                 data=f"Remembered: {content}"
             )
-
         except Exception as e:
             logger.error(f"Failed to save memory: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(f"Tool error in {__name__}: {e}") from e
