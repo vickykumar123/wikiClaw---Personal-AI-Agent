@@ -362,7 +362,7 @@ User sends PDF via Telegram
 | **Email** | Gmail API | Send emails |
 | **Web Search** | DuckDuckGo (ddgs) | Search the internet |
 | **Bot Platform** | Telegram (python-telegram-bot) | User interface |
-| **Webhook** | FastAPI + ngrok | Receive Telegram updates |
+| **Webhook** | FastAPI + ngrok | Receive Telegram updates (exposes /health endpoint returning {'status':'ok'} for health monitoring) |
 | **Language** | Python 3.11+ | Application code |
 
 ---

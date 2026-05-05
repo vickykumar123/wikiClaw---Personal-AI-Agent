@@ -67,8 +67,12 @@ class WebhookServer:
         """Set up webhook endpoints for each platform."""
 
         @self.app.get("/health")
-        async def health_check():
-            """Health check endpoint."""
+        async def health_check() -> Dict[str, str]:
+            """Health check endpoint.
+
+            Returns:
+                Dict[str, str]: A dictionary indicating service health status.
+            """
             logger.info('Health check requested')
             return {"status": "ok"}
 
