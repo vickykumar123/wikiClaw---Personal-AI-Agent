@@ -6,7 +6,8 @@ import logging
 import os
 import re
 import tempfile
-from typing import Callable, Optional, List
+import time
+from typing import Any, Callable, Optional, List
 
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
@@ -100,7 +101,7 @@ class TelegramBot(BaseMessenger):
         """
         self.token = token
         self.message_callback = message_callback
-        self.application: Optional[Application] = None
+        self.application: Optional[Any] = None
 
     async def start(self) -> None:
         """
@@ -188,6 +189,92 @@ class TelegramBot(BaseMessenger):
 
             # Send response back to user
             await self.send_message(message.chat_id, response)
+
+    async def process_update_with_logging(self, update: Any, request_id: Optional[str] = None) -> Any:
+        """
+        Wrap processing of a raw Telegram update with structured logging.
+
+        This wrapper produces a minimal, non-sensitive summary of the update,
+        logs the start and completion (including duration), delegates to the
+        underlying application's process_update method, and propagates any
+        exceptions raised by the underlying processing.
+
+        Args:
+            update: Raw update object from Telegram or a dict representing it.
+            request_id: Optional external request identifier to correlate logs.
+
+        Returns:
+            The value returned by the underlying application's process_update.
+
+        Raises:
+            RuntimeError: If the underlying application is not available or
+                does not expose process_update.
+            Exception: Re-raises any exception thrown by the underlying
+                application's process_update.
+        """
+        # Determine update_id robustly
+        update_id = getattr(update, 'update_id', None)
+        if update_id is None and isinstance(update, dict):
+            update_id = update.get('update_id')
+
+        # Build a minimal, non-sensitive summary
+        summary = "unknown"
+        try:
+            if hasattr(update, 'message') and getattr(update.message, 'text', None):
+                text_val = getattr(update.message, 'text', None)
+                summary = f"message_text_len={len(text_val) if text_val else 0}"
+            elif isinstance(update, dict):
+                keys = list(update.keys())
+                summary = f"keys={keys}"
+            else:
+                top_attrs = []
+                for attr in ('message', 'callback_query', 'edited_message', 'channel_post'):
+                    if getattr(update, attr, None):
+                        top_attrs.append(attr)
+                summary = f"types={top_attrs or ['unknown']}"
+        except Exception:
+            summary = "summary_unavailable"
+
+        logger.info(
+            "Starting processing update: request_id=%s, update_id=%s, summary=%s",
+            request_id,
+            update_id,
+            summary,
+        )
+
+        # Ensure underlying application is present and supports process_update
+        if not self.application or not hasattr(self.application, 'process_update'):
+            logger.error(
+                "Application not available or missing process_update: request_id=%s, update_id=%s",
+                request_id,
+                update_id,
+            )
+            raise RuntimeError("Telegram application not available to process update")
+
+        start_time = time.perf_counter()
+        try:
+            result = await self.application.process_update(update)
+            duration_ms = (time.perf_counter() - start_time) * 1000.0
+
+            # Minimal result summary to avoid sensitive content
+            result_summary = type(result).__name__ if result is not None else 'None'
+
+            logger.info(
+                "Completed processing update: request_id=%s, update_id=%s, result=%s, duration_ms=%.2f",
+                request_id,
+                update_id,
+                result_summary,
+                duration_ms,
+            )
+
+            return result
+        except Exception:
+            logger.exception(
+                "Exception while processing update: request_id=%s, update_id=%s",
+                request_id,
+                update_id,
+            )
+            raise
 
     async def _on_message(
         self,

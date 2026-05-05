@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import pytest
 from fastapi.testclient import TestClient
@@ -8,53 +8,52 @@ from src.integrations.telegram import webhook as webhook_mod
 from src.integrations.telegram.webhook import WebhookServer
 
 
-class DummyApplication:
+class DummyBot:
+    """A minimal dummy bot exposing the new process_update_with_logging API for tests.
+
+    Attributes:
+        called: Whether the method was invoked.
+        last_update: The last update object passed in.
+        last_request_id: The last request_id passed in.
+    """
+
     def __init__(self) -> None:
-        self.bot: Any = object()
         self.called: bool = False
         self.last_update: Any = None
+        self.last_request_id: Optional[str] = None
 
-    async def process_update(self, update: Any) -> None:
-        """Simulate processing an update by recording it was called."""
+    async def process_update_with_logging(self, update: Any, request_id: Optional[str] = None) -> None:
+        """Record invocation and capture the provided update and request_id.
+
+        Args:
+            update: The update object passed from the webhook.
+            request_id: Optional request id propagated from the incoming HTTP request.
+
+        Returns:
+            None
+        """
         self.called = True
         self.last_update = update
-
-
-class DummyBot:
-    def __init__(self) -> None:
-        self.application = DummyApplication()
+        self.last_request_id = request_id
+        return None
 
 
 def test_telegram_webhook_correlation_logging(caplog: pytest.LogCaptureFixture) -> None:
     """Verify correlation ID generation/propagation and basic logging on the Telegram webhook endpoint.
 
-    This test instantiates the WebhookServer, registers a minimal dummy bot, monkeypatches
-    Update.de_json to avoid real Telegram parsing, and performs a POST to the webhook URL.
-    It asserts that the response contains an X-Request-ID header and that that ID plus the
-    request path appear in the captured logs.
+    This test instantiates the WebhookServer, registers a minimal dummy bot by assigning it
+    to server._telegram_bot, monkeypatches Update.de_json to avoid real Telegram parsing,
+    and performs a POST to the webhook URL. It asserts that the response contains an
+    X-Request-ID header, that the ID and the request path appear in logs, and that the
+    dummy bot received the propagated request_id via process_update_with_logging.
     """
     caplog.set_level(logging.INFO)
 
     server = WebhookServer()
     dummy_bot = DummyBot()
 
-    # Try a few possible registration method names to be resilient to implementation details
-    if hasattr(server, "register_bot"):
-        server.register_bot("dummy", dummy_bot)
-    elif hasattr(server, "register"):
-        server.register("dummy", dummy_bot)
-    elif hasattr(server, "add_bot"):
-        server.add_bot("dummy", dummy_bot)
-    else:
-        # Best-effort fallback: attach to a bots mapping if present or set an attribute
-        try:
-            if hasattr(server, "bots") and isinstance(server.bots, dict):
-                server.bots["dummy"] = dummy_bot
-            else:
-                setattr(server, "bots", {"dummy": dummy_bot})
-        except Exception:
-            # If registration is not necessary for the route to exist, continue
-            pass
+    # Register the dummy bot directly on the server for the webhook to use
+    setattr(server, "_telegram_bot", dummy_bot)
 
     # Monkeypatch Update.de_json to return a simple object and avoid complex Update construction
     original_de_json = getattr(webhook_mod.Update, "de_json", None)
@@ -77,6 +76,10 @@ def test_telegram_webhook_correlation_logging(caplog: pytest.LogCaptureFixture) 
         log_text = caplog.text
         assert request_id in log_text
         assert "/webhook/telegram" in log_text
+
+        # Verify the webhook invoked the new bot API and propagated the request id
+        assert getattr(dummy_bot, "called", False) is True
+        assert dummy_bot.last_request_id == request_id
     finally:
         # Restore original de_json if it existed
         if original_de_json is not None:

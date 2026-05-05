@@ -190,8 +190,9 @@ class WebhookServer:
                 logger.debug(f"[{request_id}] Update received: id={update.update_id}, type={type(update)}")
                 logger.info(f"[{request_id}] Processing Telegram update id={update.update_id}")
 
-                # Process the update
-                await self._telegram_bot.application.process_update(update)
+                # Process the update.
+                # Delegate to the bot's logging wrapper so processing is logged with the request_id.
+                await self._telegram_bot.process_update_with_logging(update, request_id=request_id)
                 logger.info(f"[{request_id}] Telegram update processed successfully", extra={'update_id': update.update_id})
 
                 duration_ms = int((time.time() - getattr(request.state, 'start_time', timestamp)) * 1000)
