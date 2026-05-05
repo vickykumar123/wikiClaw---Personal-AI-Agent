@@ -23,6 +23,148 @@ from constants import (
 # Set up logging
 logger = logging.getLogger(__name__)
 
+import uuid
+import time
+from datetime import datetime
+import traceback
+from typing import Iterable
+
+
+def _generate_request_id() -> str:
+    """Generate and return a UUID4 string.
+
+    Returns:
+        A UUID4 string suitable for use as a request identifier.
+    """
+    return str(uuid.uuid4())
+
+
+def _sanitize_headers(headers: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a copy of headers with Authorization and Cookie keys removed.
+
+    Keys are matched case-insensitively. Other headers are preserved as-is.
+
+    Args:
+        headers: Mapping of header names to values.
+
+    Returns:
+        A new dictionary containing the sanitized headers.
+    """
+    if not headers:
+        return {}
+    sanitized: Dict[str, Any] = {}
+    sensitive = {"authorization", "cookie"}
+    for k, v in headers.items():
+        if not isinstance(k, str):
+            # Preserve non-string keys as-is
+            sanitized[k] = v
+            continue
+        if k.lower() in sensitive:
+            continue
+        sanitized[k] = v
+    return sanitized
+
+
+def _redact_sensitive(
+    data: Any,
+    keys_to_redact: Iterable[str] = (
+        "password",
+        "token",
+        "access_token",
+        "auth",
+        "api_key",
+        "secret",
+        "email",
+    ),
+) -> Any:
+    """Recursively redact sensitive values in structures.
+
+    Walks dictionaries and lists/tuples/sets and replaces values for keys
+    matching any of ``keys_to_redact`` with the string "<REDACTED>". Key
+    matching is case-insensitive. Non-dict/list primitives are returned as-is.
+
+    Args:
+        data: The data structure to redact.
+        keys_to_redact: Iterable of key names to redact when encountered in dicts.
+
+    Returns:
+        A new data structure with sensitive values replaced by "<REDACTED>".
+    """
+    lower_keys = {k.lower() for k in keys_to_redact}
+
+    if isinstance(data, dict):
+        result: Dict[Any, Any] = {}
+        for k, v in data.items():
+            if isinstance(k, str) and k.lower() in lower_keys:
+                result[k] = "<REDACTED>"
+            else:
+                result[k] = _redact_sensitive(v, keys_to_redact)
+        return result
+
+    if isinstance(data, list):
+        return [_redact_sensitive(x, keys_to_redact) for x in data]
+
+    if isinstance(data, tuple):
+        return tuple(_redact_sensitive(x, keys_to_redact) for x in data)
+
+    if isinstance(data, set):
+        # Convert to list to avoid issues with unhashable redacted items
+        return [_redact_sensitive(x, keys_to_redact) for x in data]
+
+    # Primitives (str, int, float, bool, None) are safe to return as-is
+    return data
+
+
+def _summarize_body(data: Any, max_chars: int = 500) -> Dict[str, Any]:
+    """Produce a small summary of a request/response body for logging.
+
+    The summary intentionally avoids exposing sensitive values by using
+    ``_redact_sensitive`` where appropriate. The returned summary is shallow and
+    intended for safe logging (previewing strings, listing top-level keys,
+    indicating types, and providing counts for sequences).
+
+    Args:
+        data: The body to summarize (dict, list, str, number, etc.).
+        max_chars: Maximum number of characters to include for string previews.
+
+    Returns:
+        A dictionary containing a concise summary suitable for logs.
+    """
+    if isinstance(data, dict):
+        keys = list(data.keys())
+        types = {k: type(v).__name__ for k, v in data.items()}
+        # Create a shallow redacted copy for preview
+        redacted = _redact_sensitive(data)
+        sample: Dict[str, Any] = {}
+        for k, v in redacted.items():
+            if isinstance(v, str):
+                sample[k] = v[:max_chars]
+            elif isinstance(v, (int, float, bool)) or v is None:
+                sample[k] = v
+            else:
+                sample[k] = f"<{type(v).__name__}>"
+        return {"type": "dict", "keys": keys, "types": types, "sample": sample}
+
+    if isinstance(data, list):
+        sample_types = [type(x).__name__ for x in data[:5]]
+        return {"type": "list", "length": len(data), "sample_types": sample_types}
+
+    if isinstance(data, str):
+        return {"type": "str", "preview": data[:max_chars]}
+
+    if data is None:
+        return {"type": "none"}
+
+    if isinstance(data, (int, float, bool)):
+        return {"type": type(data).__name__, "value": data}
+
+    # Fallback for other object types
+    try:
+        text = str(data)
+    except Exception:
+        text = f"<{type(data).__name__}>"
+    return {"type": type(data).__name__, "preview": text[:max_chars]}
+
 
 class WebhookServer:
     """
@@ -121,31 +263,63 @@ class WebhookServer:
                 HTTPException: If the Telegram bot is not configured (503) or if an
                     unexpected error occurs during processing (500).
             """
-            # Log request details
-            logger.info(
-                "Telegram webhook request - method: %s, path: %s, client_ip: %s",
-                request.method,
-                request.url.path,
-                request.client.host if request.client else "unknown",
-            )
-            logger.debug("Request headers: %s", dict(request.headers))
+            # Structured logging: generate identifiers and timing
+            request_id: str = _generate_request_id()
+            timestamp: str = datetime.utcnow().isoformat() + "Z"
+            start_time: float = time.time()
+
+            # Safely obtain and sanitize headers
+            raw_headers: Dict[str, Any]
+            hdr_list = getattr(request.headers, "_list", None)
+            if hdr_list:
+                try:
+                    raw_headers = dict(hdr_list)
+                except Exception:
+                    raw_headers = dict(request.headers)
+            else:
+                raw_headers = dict(request.headers)
+            sanitized_headers: Dict[str, Any] = _sanitize_headers(raw_headers)
+
+            # Query params
+            query_params: Dict[str, Any] = dict(request.query_params)
 
             if not self._telegram_bot:
                 raise HTTPException(status_code=503, detail="Telegram bot not configured")
 
             try:
-                    # Parse the update
-                    data = await request.json()
-                    logger.debug("Starting processing of Telegram webhook payload")
-                    # Log receipt with truncated pretty JSON
+                # Parse body safely: try raw body -> json.loads, then fallback to request.json()
+                body_bytes = await request.body()
+                raw_data: Any = {}
+                try:
                     try:
-                        pretty = json.dumps(data, indent=2)
+                        body_text = body_bytes.decode("utf-8")
                     except Exception:
-                        pretty = str(data)
-                    logger.debug("Full Telegram webhook payload: %s", pretty)
-                    logger.info("Received Telegram webhook: %s", pretty[:500])
+                        body_text = body_bytes.decode("utf-8", errors="replace")
+                    raw_data = json.loads(body_text) if body_text else {}
+                except Exception:
+                    try:
+                        raw_data = await request.json()
+                    except Exception:
+                        raw_data = {}
 
-                update = Update.de_json(data, self._telegram_bot.application.bot)
+                # Create redacted copy for logging and summary
+                redacted_body: Any = _redact_sensitive(raw_data)
+                body_summary: Dict[str, Any] = _summarize_body(redacted_body)
+
+                # Log incoming structured message
+                incoming_log = {
+                    "request_id": request_id,
+                    "timestamp": timestamp,
+                    "method": request.method,
+                    "path": request.url.path,
+                    "headers": sanitized_headers,
+                    "query_params": query_params,
+                    "body_summary": body_summary,
+                }
+                logger.info(json.dumps(incoming_log, default=str))
+
+                # Build Update from original (unredacted) payload and process
+                update = Update.de_json(raw_data, self._telegram_bot.application.bot)
 
                 # Log concise summary of the update (ID and type)
                 try:
@@ -156,34 +330,47 @@ class WebhookServer:
                     )
                 except Exception:
                     update_type = "unknown"
+
                 logger.info(
                     "Telegram update received: id=%s, type=%s",
                     getattr(update, "update_id", "N/A"),
                     update_type,
                 )
-
                 logger.debug("Telegram Update object: %s", update)
 
-                # Import time for duration measurement
-                from time import time
-                start_time = time()
-                logger.info("Processing Telegram update")
-                logger.info(f"Processing Telegram Update ID: {getattr(update, 'update_id', 'N/A')}")
+                # Process the update and measure duration
                 await self._telegram_bot.application.process_update(update)
-                logger.info("Telegram webhook processed successfully")
-                duration = time() - start_time
-                logger.info(
-                    "Finished processing Telegram update (duration %.3f seconds)",
-                    duration,
-                )
 
-                response_payload = {"ok": True}
-                logger.info("Telegram webhook response payload: %s", response_payload)
-                logger.debug("Returning response for Telegram webhook: {'ok': True}")
-                return response_payload
+                duration: float = time.time() - start_time
+                response_body: Dict[str, bool] = {"ok": True}
+                response_summary: Dict[str, Any] = _summarize_body(response_body)
+
+                success_log = {
+                    "request_id": request_id,
+                    "timestamp": timestamp,
+                    "status_code": 200,
+                    "response_summary": response_summary,
+                    "duration": duration,
+                }
+                logger.info(json.dumps(success_log, default=str))
+
+                return response_body
 
             except Exception as e:
-                logger.exception("Error processing Telegram webhook")
+                # Capture stack trace and log structured error without sensitive values
+                stack = traceback.format_exc()
+                error_log = {
+                    "request_id": request_id,
+                    "timestamp": timestamp,
+                    "method": request.method,
+                    "path": request.url.path,
+                    "headers": sanitized_headers,
+                    "query_params": query_params,
+                    "exception": str(e),
+                    "stack_trace": stack,
+                }
+                # Ensure we do not log unredacted body or sensitive headers here
+                logger.error(json.dumps(error_log, default=str))
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Placeholder for future platforms
