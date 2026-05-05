@@ -110,5 +110,8 @@ def _get_required(key: str, error_message: str) -> str:
 
     if not value:
         raise ValueError(error_message)
-
     return value
+
+def get_version() -> str:
+    """Return the current version of the application."""
+    return "1.0.0"
