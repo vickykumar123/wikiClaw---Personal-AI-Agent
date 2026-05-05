@@ -112,3 +112,12 @@ def _get_required(key: str, error_message: str) -> str:
         raise ValueError(error_message)
 
     return value
+
+
+def ping() -> str:
+    """Return a simple pong response for health checks.
+
+    Returns:
+        str: The string "pong".
+    """
+    return "pong"
