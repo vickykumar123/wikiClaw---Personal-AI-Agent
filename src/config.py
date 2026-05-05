@@ -110,5 +110,14 @@ def _get_required(key: str, error_message: str) -> str:
 
     if not value:
         raise ValueError(error_message)
-
     return value
+
+def format_timestamp(dt):
+    """Format a datetime object as 'YYYY-MM-DD HH:MM:SS'."""
+    return dt.strftime('%Y-%m-%d %H:%M:%S')
+
+def truncate_text(text, max_length=100):
+    """Truncate text to max_length characters, adding an ellipsis if truncated."""
+    if len(text) <= max_length:
+        return text
+    return text[:max_length].rstrip() + '…'
