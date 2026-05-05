@@ -24,6 +24,8 @@ _EMAIL_PATTERN: Pattern[str] = re.compile(
     r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
 )
 
+_PHONE_PATTERN: Pattern[str] = re.compile(r'^\+?[1-9]\d{1,14}$')
+
 
 def validate_url(url: str) -> bool:
     """Validate a URL string.
@@ -58,3 +60,15 @@ def validate_port(port: int) -> bool:
         otherwise False.
     """
     return isinstance(port, int) and 1 <= port <= 65535
+
+
+def validate_phone(phone: str) -> bool:
+    """Validate a phone number.
+
+    Args:
+        phone: The phone number to validate.
+
+    Returns:
+        True if the phone matches the expected pattern, False otherwise.
+    """
+    return bool(_PHONE_PATTERN.match(phone))
