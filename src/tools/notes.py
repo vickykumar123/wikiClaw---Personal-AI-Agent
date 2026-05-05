@@ -93,39 +93,19 @@ class CreateNoteTool(BaseTool):
             )
 
         except Exception as e:
-            logger.error(f"Failed to create note: {e}")
-            return ToolResult(
-                success=False,
-                data=None,
-                error=str(e)
-            )
+            raise RuntimeError(str(e))
 
 
-class SearchNotesTool(BaseTool):
-    """Tool for searching notes by content."""
+        except Exception as e:
+            raise RuntimeError(str(e))
 
-    def __init__(
-        self,
-        db: MongoDB,
-        embeddings_client: EmbeddingsClient,
-        user_id: str
-    ):
-        logger.info(f"Initializing SearchNotesTool for user_id: {user_id}")
-        self.db = db
-        self.embeddings = embeddings_client
-        self.user_id = user_id
 
-    @property
-    def name(self) -> str:
-        return "search_notes"
+        except Exception as e:
+            raise RuntimeError(str(e))
 
-    @property
-    def description(self) -> str:
-        return (
-            "Search through user's notes using semantic search. "
-            "Use this when the user asks to find a note, "
-            "or asks about something they wrote down."
-        )
+
+        except Exception as e:
+            raise RuntimeError(str(e))
 
     @property
     def parameters(self) -> Dict[str, Any]:
