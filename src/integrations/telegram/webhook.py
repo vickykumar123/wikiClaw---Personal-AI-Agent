@@ -85,12 +85,23 @@ class WebhookServer:
             return {"requests_handled": self.requests_handled}
 
         @self.app.post("/webhook/telegram")
-        async def telegram_webhook(request: Request):
+        async def telegram_webhook(request: Request) -> Dict[str, Any]:
             """
-            Handle incoming Telegram webhook.
+            Handles incoming Telegram webhook.
 
-            Telegram sends updates as JSON POST requests.
+            Args:
+                request (Request): The incoming FastAPI request.
+
+            Returns:
+                Dict[str, Any]: JSON response indicating success.
             """
+            logger.info(
+                "Received %s request to %s from %s with headers %s",
+                request.method,
+                request.url.path,
+                request.client.host,
+                dict(request.headers)
+            )
             if not self._telegram_bot:
                 raise HTTPException(status_code=503, detail="Telegram bot not configured")
 
@@ -103,12 +114,12 @@ class WebhookServer:
                 await self._telegram_bot.application.process_update(update)
 
                 self.requests_handled += 1
+                logger.info("Telegram webhook processed successfully, responding with 200 OK")
                 return {"ok": True}
 
             except Exception as e:
                 logger.error(f"Error processing Telegram webhook: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
-
         # Placeholder for future platforms
         @self.app.post("/webhook/whatsapp")
         async def whatsapp_webhook(request: Request):
