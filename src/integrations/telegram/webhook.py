@@ -5,10 +5,12 @@
 import logging
 import asyncio
 import json
-from typing import Optional, Dict, Any
+import time
+import traceback
+from typing import Optional, Dict, Any, Callable
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Response
 from telegram import Update
 import uvicorn
 from pyngrok import ngrok
@@ -21,7 +23,40 @@ from constants import (
 )
 
 # Set up logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("wikiClaw.webhook")
+
+# Constants for truncation and sensitive headers
+BODY_TRUNCATE_LEN = 200
+SENSITIVE_HEADERS = {"authorization", "cookie", "set-cookie", "x-api-key", "proxy-authorization"}
+
+
+def sanitize_headers(headers: Dict[str, Any]) -> Dict[str, str]:
+    """
+    Return a sanitized copy of headers with sensitive values redacted and long
+    values truncated.
+
+    Args:
+        headers: Original headers mapping.
+
+    Returns:
+        A new dict mapping header names (lowercased) to string values that are
+        safe for logging.
+    """
+    sanitized: Dict[str, str] = {}
+    for key, value in headers.items():
+        k = key.lower()
+        try:
+            v = value.decode() if isinstance(value, (bytes, bytearray)) else str(value)
+        except Exception:
+            v = "<unserializable>"
+        if k in SENSITIVE_HEADERS:
+            sanitized[k] = "<redacted>"
+        else:
+            if len(v) > BODY_TRUNCATE_LEN:
+                sanitized[k] = v[:BODY_TRUNCATE_LEN] + "...(truncated)"
+            else:
+                sanitized[k] = v
+    return sanitized
 
 
 class WebhookServer:
@@ -60,6 +95,109 @@ class WebhookServer:
             lifespan=self._lifespan
         )
 
+        # Register request/response logging middleware
+        @self.app.middleware("http")
+        async def request_logging_middleware(request: Request, call_next: Callable[[Request], Response]) -> Response:
+            """
+            Middleware that logs incoming requests, outgoing responses, and
+            exceptions with contextual request information.
+
+            Logs:
+            - Incoming: timestamp, method, path, client IP, sanitized headers,
+              content-type, truncated body.
+            - Outgoing: status code, truncated body, latency (ms).
+            - Exceptions: full stack trace and the same request context.
+
+            Args:
+                request: Incoming FastAPI request.
+                call_next: Callable to invoke the next handler and obtain a response.
+
+            Returns:
+                The HTTP response to return to the client.
+            """
+            start_ts = time.time()
+            timestamp = time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(start_ts))
+            client_ip = request.client.host if request.client else "unknown"
+
+            try:
+                body_bytes = await request.body()
+            except Exception:
+                body_bytes = b""
+
+            try:
+                body_text = body_bytes.decode(errors='replace')
+            except Exception:
+                body_text = "<unserializable>"
+
+            truncated_body = body_text if len(body_text) <= BODY_TRUNCATE_LEN else body_text[:BODY_TRUNCATE_LEN] + "...(truncated)"
+            headers = dict(request.headers)
+            sanitized = sanitize_headers(headers)
+            content_type = headers.get("content-type") or headers.get("Content-Type") or ""
+
+            logger.info("Incoming request",
+                        extra={
+                            "timestamp": timestamp,
+                            "method": request.method,
+                            "path": request.url.path,
+                            "client_ip": client_ip,
+                            "headers": sanitized,
+                            "content_type": content_type,
+                            "body": truncated_body,
+                        })
+
+            # Re-create request with the captured body so downstream can read it
+            async def _receive() -> dict:
+                return {"type": "http.request", "body": body_bytes, "more_body": False}
+
+            req_with_body = Request(request.scope, receive=_receive)
+
+            try:
+                response = await call_next(req_with_body)
+
+                # Capture response body (may be streamed)
+                resp_body = b""
+                async for chunk in response.body_iterator:
+                    resp_body += chunk
+
+                try:
+                    resp_text = resp_body.decode(errors='replace')
+                except Exception:
+                    resp_text = "<unserializable>"
+
+                truncated_resp = resp_text if len(resp_text) <= BODY_TRUNCATE_LEN else resp_text[:BODY_TRUNCATE_LEN] + "...(truncated)"
+                latency_ms = int((time.time() - start_ts) * 1000)
+
+                logger.info("Outgoing response",
+                            extra={
+                                "status_code": response.status_code,
+                                "body": truncated_resp,
+                                "latency_ms": latency_ms,
+                            })
+
+                # Rebuild response to send to client since we consumed the iterator
+                new_response = Response(
+                    content=resp_body,
+                    status_code=response.status_code,
+                    headers=dict(response.headers),
+                    media_type=response.media_type,
+                )
+                return new_response
+
+            except Exception as e:  # noqa: BLE
+                latency_ms = int((time.time() - start_ts) * 1000)
+                logger.exception("Exception during request processing",
+                                 extra={
+                                     "timestamp": timestamp,
+                                     "method": request.method,
+                                     "path": request.url.path,
+                                     "client_ip": client_ip,
+                                     "headers": sanitized,
+                                     "content_type": content_type,
+                                     "body": truncated_body,
+                                     "latency_ms": latency_ms,
+                                 })
+                raise
+
         # Register routes
         self._setup_routes()
 
@@ -79,27 +217,32 @@ class WebhookServer:
 
             Telegram sends updates as JSON POST requests.
             """
-            logger.info(f"Received Telegram webhook request from {request.client.host} at {request.headers.get('date', 'unknown')}")
             if not self._telegram_bot:
                 logger.warning("Telegram bot not configured")
                 raise HTTPException(status_code=503, detail="Telegram bot not configured")
 
+            update = None
             try:
                 # Parse the update
                 data = await request.json()
                 logger.debug(f"Telegram webhook payload: {str(data)[:200]}")
                 update = Update.de_json(data, self._telegram_bot.application.bot)
-                logger.debug(f"Update received: id={update.update_id}, type={type(update)}")
-                logger.info(f"Processing Telegram update id={update.update_id}")
 
                 # Process the update
                 await self._telegram_bot.application.process_update(update)
-                logger.info('Telegram update processed successfully', extra={'update_id': update.update_id})
 
                 return {"ok": True}
 
             except Exception as e:
-                logger.exception(f"Error processing Telegram webhook from {request.client.host}: {e}")
+                # Log full stack trace and request context
+                if update is not None and hasattr(update, "update_id"):
+                    logger.exception("Error processing Telegram webhook",
+                                     extra={
+                                         "client_ip": getattr(request.client, "host", "unknown"),
+                                         "update_id": update.update_id,
+                                     })
+                else:
+                    logger.exception(f"Error processing Telegram webhook from {getattr(request.client, 'host', 'unknown')}: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Placeholder for future platforms

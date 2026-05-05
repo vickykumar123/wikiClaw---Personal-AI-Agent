@@ -655,6 +655,10 @@ python scripts/test_file_with_agent.py
 - [ ] Cloud deployment (AWS/GCP/Railway)
 - [ ] Web UI alternative
 
+## Changelog
+
+- 2026-05-05 — Added webhook request/response and exception logging. Logs include truncation for long payloads and sanitization of sensitive headers before storage.
+
 ---
 
 ## License
