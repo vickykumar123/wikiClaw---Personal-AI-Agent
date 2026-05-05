@@ -103,6 +103,15 @@ class WebhookServer:
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Placeholder for future platforms
+        @self.app.get("/metrics")
+        async def metrics() -> Dict[str, int]:
+            """Metrics endpoint.
+
+            Returns:
+                A dictionary containing request handling metrics.
+            """
+            return {"requests_handled": 0}
+
         @self.app.post("/webhook/whatsapp")
         async def whatsapp_webhook(request: Request):
             """Handle incoming WhatsApp webhook (future)."""
