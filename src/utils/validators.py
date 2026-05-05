@@ -45,5 +45,16 @@ def validate_email(email: str) -> bool:
 
     Returns:
         True if the email matches a standard pattern, False otherwise.
-    """
     return bool(_EMAIL_PATTERN.match(email))
+
+def validate_port(port: int) -> bool:
+    """Validate a network port number.
+
+    Args:
+        port: The port number to validate.
+
+    Returns:
+        True if ``port`` is an integer between 1 and 65535 inclusive,
+        otherwise False.
+    """
+    return isinstance(port, int) and 1 <= port <= 65535
