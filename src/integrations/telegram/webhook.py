@@ -5,6 +5,8 @@
 import logging
 import asyncio
 import json
+import uuid
+import time
 from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
 
@@ -12,6 +14,7 @@ from fastapi import FastAPI, Request, HTTPException
 from telegram import Update
 import uvicorn
 from pyngrok import ngrok
+from starlette.responses import JSONResponse
 
 from constants import (
     DEFAULT_WEBHOOK_PORT,
@@ -22,6 +25,54 @@ from constants import (
 
 # Set up logging
 logger = logging.getLogger(__name__)
+
+
+def mask_headers(headers: 'dict[str, str]') -> 'dict[str, str]':
+    """
+    Return a copy of the provided headers with sensitive values masked.
+
+    Args:
+        headers: A mapping of header names to values.
+
+    Returns:
+        A new dict with sensitive header values replaced with '***'.
+
+    Notes:
+        Headers considered sensitive include 'authorization',
+        'x-telegram-bot-api-secret-token', and any header name
+        containing 'token' or 'bot' (case-insensitive).
+    """
+    masked: dict[str, str] = {}
+    for name, value in headers.items():
+        lname = name.lower()
+        if (
+            lname == 'authorization'
+            or lname == 'x-telegram-bot-api-secret-token'
+            or 'token' in lname
+            or 'bot' in lname
+        ):
+            masked[name] = '***'
+        else:
+            masked[name] = value
+    return masked
+
+
+def get_or_create_request_id(request: Request) -> str:
+    """
+    Get an existing request ID from the incoming request headers or create a new one.
+
+    Args:
+        request: The incoming FastAPI Request object.
+
+    Returns:
+        A string request ID. If the incoming request contains a header named
+        'X-Request-ID' (case-insensitive), its value is returned. Otherwise a
+        new UUID4 string is generated and returned.
+    """
+    for key, value in request.headers.items():
+        if key.lower() == 'x-request-id':
+            return value
+    return str(uuid.uuid4())
 
 
 class WebhookServer:
@@ -60,6 +111,31 @@ class WebhookServer:
             lifespan=self._lifespan
         )
 
+        # Register lightweight middleware to populate request_id and start_time
+        @self.app.middleware("http")
+        async def _request_middleware(request: Request, call_next):
+            """
+            Middleware to ensure a correlation ID and start timestamp are present.
+
+            Responsibilities:
+            - Populate request.state.request_id
+            - Populate request.state.start_time
+            - Ensure the X-Request-ID header is present on the response
+            """
+            request_id = get_or_create_request_id(request)
+            request.state.request_id = request_id
+            request.state.start_time = time.time()
+
+            response = await call_next(request)
+            # Preserve existing headers and ensure X-Request-ID is set
+            try:
+                if 'X-Request-ID' not in response.headers:
+                    response.headers['X-Request-ID'] = request_id
+            except Exception:
+                # In case response.headers isn't a mutable mapping, ignore
+                pass
+            return response
+
         # Register routes
         self._setup_routes()
 
@@ -79,27 +155,54 @@ class WebhookServer:
 
             Telegram sends updates as JSON POST requests.
             """
-            logger.info(f"Received Telegram webhook request from {request.client.host} at {request.headers.get('date', 'unknown')}")
+            # Ensure request_id is present (middleware should have set it)
+            request_id = getattr(request.state, 'request_id', None) or get_or_create_request_id(request)
+            request.state.request_id = request_id
+
+            timestamp = time.time()
+            method = request.method
+            path = request.url.path
+            remote_ip = request.client.host if getattr(request, 'client', None) else 'unknown'
+
+            # Capture and mask headers
+            raw_headers = dict(request.headers)
+            masked_headers = mask_headers(raw_headers)
+
+            # Read and safely decode body; truncate for logging if too large
+            body_bytes = await request.body()
+            body_text = body_bytes.decode('utf-8', errors='replace') if body_bytes else ''
+            if len(body_text) > 2048:
+                truncated_body = body_text[:2048] + '...[truncated]'
+            else:
+                truncated_body = body_text
+
+            logger.info(f"[{request_id}] Incoming request: {method} {path} from {remote_ip} headers={masked_headers} body={truncated_body}")
+
             if not self._telegram_bot:
-                logger.warning("Telegram bot not configured")
+                logger.warning(f"[{request_id}] Telegram bot not configured")
                 raise HTTPException(status_code=503, detail="Telegram bot not configured")
 
             try:
-                # Parse the update
+                # Parse the update (use request.json() to maintain existing behavior)
                 data = await request.json()
-                logger.debug(f"Telegram webhook payload: {str(data)[:200]}")
+                logger.debug(f"[{request_id}] Telegram webhook payload: {str(data)[:200]}")
                 update = Update.de_json(data, self._telegram_bot.application.bot)
-                logger.debug(f"Update received: id={update.update_id}, type={type(update)}")
-                logger.info(f"Processing Telegram update id={update.update_id}")
+                logger.debug(f"[{request_id}] Update received: id={update.update_id}, type={type(update)}")
+                logger.info(f"[{request_id}] Processing Telegram update id={update.update_id}")
 
                 # Process the update
                 await self._telegram_bot.application.process_update(update)
-                logger.info('Telegram update processed successfully', extra={'update_id': update.update_id})
+                logger.info(f"[{request_id}] Telegram update processed successfully", extra={'update_id': update.update_id})
 
-                return {"ok": True}
+                duration_ms = int((time.time() - getattr(request.state, 'start_time', timestamp)) * 1000)
+                logger.info(f"[{request_id}] Outgoing response: status=200 body={'{"ok": True}'} duration_ms={duration_ms}ms")
+
+                return JSONResponse(content={"ok": True}, headers={"X-Request-ID": request_id})
 
             except Exception as e:
-                logger.exception(f"Error processing Telegram webhook from {request.client.host}: {e}")
+                duration_ms = int((time.time() - getattr(request.state, 'start_time', timestamp)) * 1000)
+                logger.error(f"[{request_id}] Error processing Telegram webhook: {e} duration_ms={duration_ms}ms")
+                # Re-raise as HTTPException so FastAPI will handle the response
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Placeholder for future platforms
