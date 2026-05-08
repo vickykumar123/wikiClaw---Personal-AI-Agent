@@ -335,6 +335,7 @@ class WebhookServer:
                     "body_summary": body_summary,
                 }
                 logger.info(json.dumps(incoming_log, default=str))
+                logger.debug("Incoming request payload: %s", json.dumps(raw_data, indent=2, default=str))
 
                 # Build Update from original (unredacted) payload and process
                 update = Update.de_json(raw_data, self._telegram_bot.application.bot)
@@ -378,20 +379,12 @@ class WebhookServer:
                 return response_body
 
             except Exception as e:
-                # Capture stack trace and log structured error without sensitive values
-                stack = traceback.format_exc()
-                error_log = {
-                    "request_id": request_id,
-                    "timestamp": timestamp,
-                    "method": request.method,
-                    "path": request.url.path,
-                    "headers": sanitized_headers,
-                    "query_params": query_params,
-                    "exception": str(e),
-                    "stack_trace": stack,
-                }
-                # Ensure we do not log unredacted body or sensitive headers here
-                logger.error(json.dumps(error_log, default=str))
+                # Log full request payload with stack trace
+                logger.exception(
+                    "Error processing Telegram webhook: %s\nPayload: %s",
+                    str(e),
+                    json.dumps(raw_data, indent=2, default=str)
+                )
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Placeholder for future platforms
