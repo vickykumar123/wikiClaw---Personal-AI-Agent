@@ -188,6 +188,10 @@ class WebhookServer:
             port: Port to run server on
             ngrok_auth_token: ngrok authentication token
         """
+        # Entry log for __init__
+        logger.debug("Entering __init__: port=%s, ngrok_auth_token=%s", port, ngrok_auth_token)
+        start_time = time.time()
+
         self.port = port
         self.ngrok_auth_token = ngrok_auth_token
         self.ngrok_tunnel = None
@@ -220,8 +224,15 @@ class WebhookServer:
         # Register routes
         self._setup_routes()
 
+        # Exit log for __init__
+        duration = time.time() - start_time
+        logger.debug("Exiting __init__ after %.3f seconds", duration)
+
     def _setup_routes(self) -> None:
         """Set up webhook endpoints for each platform."""
+        # Entry log for _setup_routes
+        logger.debug("Entering _setup_routes")
+        start_time = time.time()
 
         @self.app.get("/health")
         async def health_check(request: Request) -> Dict[str, str]:
@@ -235,13 +246,18 @@ class WebhookServer:
             Returns:
                 A dictionary with a status key indicating service health.
             """
+            # Entry log for health_check
+            logger.debug("Entering health_check")
             logger.info(
                 "Health check request - method: %s, path: %s, client_ip: %s",
                 request.method,
                 request.url.path,
                 request.client.host if request.client else "unknown",
             )
-            return {"status": "ok"}
+            response = {"status": "ok"}
+            # Exit log for health_check
+            logger.debug("Exiting health_check with response %s", response)
+            return response
 
         @self.app.post("/webhook/telegram")
         async def telegram_webhook(request: Request) -> Dict[str, bool]:
@@ -263,6 +279,8 @@ class WebhookServer:
                 HTTPException: If the Telegram bot is not configured (503) or if an
                     unexpected error occurs during processing (500).
             """
+            # Entry log for telegram_webhook
+            logger.debug("Entering telegram_webhook")
             # Structured logging: generate identifiers and timing
             request_id: str = _generate_request_id()
             timestamp: str = datetime.utcnow().isoformat() + "Z"
@@ -354,6 +372,9 @@ class WebhookServer:
                 }
                 logger.info(json.dumps(success_log, default=str))
 
+                # Exit log for telegram_webhook
+                logger.debug("Exiting telegram_webhook after %.3f seconds", duration)
+
                 return response_body
 
             except Exception as e:
@@ -377,6 +398,8 @@ class WebhookServer:
         @self.app.post("/webhook/whatsapp")
         async def whatsapp_webhook(request: Request):
             """Handle incoming WhatsApp webhook (future)."""
+            # Entry log for whatsapp_webhook
+            logger.debug("Entering whatsapp_webhook")
             logger.info("Received WhatsApp webhook request")
             # Log request method, path, and raw JSON body for debugging
             body_bytes = await request.body()
@@ -390,7 +413,14 @@ class WebhookServer:
                 request.url.path,
                 body_str,
             )
-            return {"ok": True, "message": "WhatsApp webhook not implemented yet"}
+            response = {"ok": True, "message": "WhatsApp webhook not implemented yet"}
+            # Exit log for whatsapp_webhook
+            logger.debug("Exiting whatsapp_webhook with response %s", response)
+            return response
+
+        # Exit log for _setup_routes
+        duration = time.time() - start_time
+        logger.debug("Exiting _setup_routes after %.3f seconds", duration)
 
     @asynccontextmanager
     async def _lifespan(self, app: FastAPI):
@@ -400,6 +430,9 @@ class WebhookServer:
         - On startup: Start ngrok tunnel
         - On shutdown: Close tunnel
         """
+        # Entry log for _lifespan
+        logger.debug("Entering _lifespan")
+        start_time = time.time()
         # Startup
         logger.info(f"Starting webhook server on port {self.port}")
         logger.info("Webhook server startup sequence initiated")
@@ -408,6 +441,9 @@ class WebhookServer:
         logger.info("Webhook server shutdown sequence initiated")
         await self._stop_ngrok()
         logger.info("Webhook server shutdown complete")
+        # Exit log for _lifespan
+        duration = time.time() - start_time
+        logger.debug("Exiting _lifespan after %.3f seconds", duration)
 
     def register_telegram_bot(self, bot) -> None:
         """
@@ -416,8 +452,12 @@ class WebhookServer:
         Args:
             bot: TelegramBot instance
         """
+        # Entry log for register_telegram_bot
+        logger.debug("Entering register_telegram_bot")
         self._telegram_bot = bot
         logger.info("Telegram bot registered with webhook server")
+        # Exit log for register_telegram_bot
+        logger.debug("Exiting register_telegram_bot")
 
     async def start_ngrok(self) -> str:
         """
@@ -426,6 +466,9 @@ class WebhookServer:
         Returns:
             Public HTTPS URL for webhooks
         """
+        # Entry log for start_ngrok
+        logger.debug("Entering start_ngrok")
+        start_time = time.time()
         if self.ngrok_auth_token:
             ngrok.set_auth_token(self.ngrok_auth_token)
 
@@ -442,13 +485,22 @@ class WebhookServer:
             self.webhook_url = self.webhook_url.replace("http://", "https://")
 
         logger.info(f"ngrok tunnel started: {self.webhook_url}")
+        # Exit log for start_ngrok
+        duration = time.time() - start_time
+        logger.debug("Exiting start_ngrok after %.3f seconds", duration)
         return self.webhook_url
 
     async def _stop_ngrok(self) -> None:
         """Stop ngrok tunnel."""
+        # Entry log for _stop_ngrok
+        logger.debug("Entering _stop_ngrok")
+        start_time = time.time()
         if self.ngrok_tunnel:
             ngrok.disconnect(self.ngrok_tunnel.public_url)
             logger.info("ngrok tunnel stopped")
+        # Exit log for _stop_ngrok
+        duration = time.time() - start_time
+        logger.debug("Exiting _stop_ngrok after %.3f seconds", duration)
 
     async def set_telegram_webhook(self) -> bool:
         """
@@ -457,8 +509,13 @@ class WebhookServer:
         Returns:
             True if successful
         """
+        # Entry log for set_telegram_webhook
+        logger.debug("Entering set_telegram_webhook")
+        start_time = time.time()
         if not self._telegram_bot or not self.webhook_url:
             logger.error(ERROR_WEBHOOK_SETUP)
+            duration = time.time() - start_time
+            logger.debug("Exiting set_telegram_webhook after %.3f seconds", duration)
             return False
 
         try:
@@ -470,10 +527,14 @@ class WebhookServer:
             )
 
             logger.info(f"{MSG_WEBHOOK_SET}: {webhook_full_url}")
+            duration = time.time() - start_time
+            logger.debug("Exiting set_telegram_webhook after %.3f seconds", duration)
             return True
 
         except Exception as e:
             logger.error(f"{ERROR_WEBHOOK_SETUP}: {e}")
+            duration = time.time() - start_time
+            logger.debug("Exiting set_telegram_webhook after %.3f seconds (error)", duration)
             return False
 
     async def remove_telegram_webhook(self) -> bool:
@@ -483,14 +544,21 @@ class WebhookServer:
         Returns:
             True if successful
         """
+        # Entry log for remove_telegram_webhook
+        logger.debug("Entering remove_telegram_webhook")
+        start_time = time.time()
         try:
             if self._telegram_bot:
                 await self._telegram_bot.application.bot.delete_webhook()
                 logger.info("Telegram webhook removed")
                 logger.debug("Telegram webhook removal confirmed")
+            duration = time.time() - start_time
+            logger.debug("Exiting remove_telegram_webhook after %.3f seconds", duration)
             return True
         except Exception as e:
             logger.error(f"Failed to remove webhook: {e}")
+            duration = time.time() - start_time
+            logger.debug("Exiting remove_telegram_webhook after %.3f seconds (error)", duration)
             return False
 
     def run(self) -> None:
@@ -499,12 +567,17 @@ class WebhookServer:
 
         Use this for simple single-server deployment.
         """
+        # Entry log for run
+        logger.debug("Entering run")
+        start_time = time.time()
         uvicorn.run(
             self.app,
             host="0.0.0.0",
             port=self.port,
             log_level="info"
         )
+        duration = time.time() - start_time
+        logger.debug("Exiting run after %.3f seconds", duration)
 
     async def run_async(self) -> None:
         """
@@ -512,6 +585,9 @@ class WebhookServer:
 
         Use this when integrating with other async code.
         """
+        # Entry log for run_async
+        logger.debug("Entering run_async")
+        start_time = time.time()
         config = uvicorn.Config(
             self.app,
             host="0.0.0.0",
@@ -520,3 +596,5 @@ class WebhookServer:
         )
         server = uvicorn.Server(config)
         await server.serve()
+        duration = time.time() - start_time
+        logger.debug("Exiting run_async after %.3f seconds", duration)
