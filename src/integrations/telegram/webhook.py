@@ -21,6 +21,10 @@ from constants import (
 )
 
 # Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 
@@ -87,9 +91,11 @@ class WebhookServer:
             try:
                 # Parse the update
                 data = await request.json()
-                logger.debug(f"Telegram webhook payload: {str(data)[:200]}")
+                # Log the full incoming JSON payload for debugging
+                logger.info(f"Full Telegram webhook payload: {json.dumps(data, ensure_ascii=False)}")
                 update = Update.de_json(data, self._telegram_bot.application.bot)
-                logger.debug(f"Update received: id={update.update_id}, type={type(update)}")
+                # Log the deserialized Update object
+                logger.debug(f"Deserialized Telegram Update: {update}")
                 logger.info(f"Processing Telegram update id={update.update_id}")
 
                 # Process the update
@@ -224,6 +230,7 @@ class WebhookServer:
 
         Use this for simple single-server deployment.
         """
+        logger.info(f"Launching webhook server on host 0.0.0.0 and port {self.port}")
         uvicorn.run(
             self.app,
             host="0.0.0.0",
@@ -237,6 +244,7 @@ class WebhookServer:
 
         Use this when integrating with other async code.
         """
+        logger.info(f"Launching async webhook server on host 0.0.0.0 and port {self.port}")
         config = uvicorn.Config(
             self.app,
             host="0.0.0.0",
