@@ -18,10 +18,18 @@ from constants import (
     DEFAULT_WEBHOOK_PATH,
     MSG_WEBHOOK_SET,
     ERROR_WEBHOOK_SETUP,
+    LOG_FORMAT,
+    LOG_DATE_FORMAT,
 )
 
 # Set up logging
 logger = logging.getLogger(__name__)
+if not logger.handlers:
+    logging.basicConfig(
+        level=logging.INFO,
+        format=LOG_FORMAT,
+        datefmt=LOG_DATE_FORMAT,
+    )
 
 import uuid
 import time
@@ -165,6 +173,13 @@ def _summarize_body(data: Any, max_chars: int = 500) -> Dict[str, Any]:
         text = f"<{type(data).__name__}>"
     return {"type": type(data).__name__, "preview": text[:max_chars]}
 
+
+def _truncate(value: str, limit: int = 1000) -> str:
+    """Truncate the given string to *limit* characters, appending an ellipsis if truncated."""
+    if not isinstance(value, str):
+        # Convert non-string values to string representation
+        value = str(value)
+    return (value[:limit] + "...") if len(value) > limit else value
 
 class WebhookServer:
     """
@@ -333,9 +348,11 @@ class WebhookServer:
                     "headers": sanitized_headers,
                     "query_params": query_params,
                     "body_summary": body_summary,
+                    "remote_ip": request.client.host if request.client else None,
+                    "correlation_id": request.headers.get("X-Correlation-ID"),
                 }
                 logger.info(json.dumps(incoming_log, default=str))
-                logger.debug("Incoming request payload: %s", json.dumps(raw_data, indent=2, default=str))
+                logger.debug("Incoming request payload: %s", _truncate(json.dumps(raw_data, indent=2, default=str)))
 
                 # Build Update from original (unredacted) payload and process
                 update = Update.de_json(raw_data, self._telegram_bot.application.bot)
@@ -359,6 +376,12 @@ class WebhookServer:
 
                 # Process the update and measure duration
                 await self._telegram_bot.application.process_update(update)
+                logger.info(
+                    "Telegram update processed successfully: user_id=%s, chat_id=%s, update_id=%s",
+                    getattr(update.effective_user, "id", None),
+                    getattr(update.effective_chat, "id", None),
+                    getattr(update, "update_id", None),
+                )
 
                 duration: float = time.time() - start_time
                 response_body: Dict[str, bool] = {"ok": True}
@@ -379,11 +402,11 @@ class WebhookServer:
                 return response_body
 
             except Exception as e:
-                # Log full request payload with stack trace
+                # Log truncated request payload with stack trace
                 logger.exception(
                     "Error processing Telegram webhook: %s\nPayload: %s",
                     str(e),
-                    json.dumps(raw_data, indent=2, default=str)
+                    _truncate(json.dumps(raw_data, indent=2, default=str))
                 )
                 raise HTTPException(status_code=500, detail=str(e))
 
