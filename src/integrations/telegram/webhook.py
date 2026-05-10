@@ -176,10 +176,15 @@ class WebhookServer:
 
         Returns:
             True if successful
+
+        Notes:
+            Added detailed logging to trace attempts and outcomes of webhook setup.
         """
         if not self._telegram_bot or not self.webhook_url:
             logger.error(ERROR_WEBHOOK_SETUP)
             return False
+
+        logger.debug("Starting set_telegram_webhook process")
 
         try:
             webhook_full_url = f"{self.webhook_url}/webhook/telegram"
@@ -193,6 +198,7 @@ class WebhookServer:
             logger.debug(f"Telegram webhook set successfully: {webhook_full_url}")
 
             logger.info(f"{MSG_WEBHOOK_SET}: {webhook_full_url}")
+            logger.info("Telegram webhook set operation completed successfully")
             return True
 
         except Exception as e:
@@ -205,7 +211,11 @@ class WebhookServer:
 
         Returns:
             True if successful
+
+        Notes:
+            Added detailed logging to trace attempts and outcomes of webhook removal.
         """
+        logger.debug("Starting remove_telegram_webhook process")
         try:
             if self._telegram_bot:
                 logger.info("Removing Telegram webhook")
@@ -213,6 +223,7 @@ class WebhookServer:
                 await self._telegram_bot.application.bot.delete_webhook()
                 logger.debug("Telegram webhook successfully deleted")
                 logger.info("Telegram webhook removed")
+                logger.info("Telegram webhook removal completed")
             return True
         except Exception as e:
             logger.exception(f"Failed to remove webhook: {e}")
