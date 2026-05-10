@@ -160,7 +160,12 @@ async def main() -> None:
     logger.info(f"Webhook URL: {webhook_url}")
 
     # Set webhook with Telegram (async - network I/O)
-    await webhook_server.set_telegram_webhook()
+    # Capture result and log outcome
+    webhook_set = await webhook_server.set_telegram_webhook()
+    if webhook_set:
+        logger.info("Telegram webhook set successfully")
+    else:
+        logger.error("Failed to set Telegram webhook")
 
     logger.info(MSG_BOT_STARTED)
     logger.info("Press Ctrl+C to stop")
